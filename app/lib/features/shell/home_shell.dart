@@ -1,0 +1,227 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../forYou/for_you_screen.dart';
+import '../forYou/recommendation_provider.dart';
+import '../player/mini_player.dart';
+import '../search/queue_screen.dart';
+import '../search/search_screen.dart';
+import '../../core/l10n.dart';
+
+enum AppTab {
+  forYou(Icons.auto_awesome_rounded),
+  search(Icons.search_rounded),
+  queue(Icons.queue_music_rounded);
+
+  const AppTab(this.icon);
+
+  final IconData icon;
+
+  String label(L10n l10n) => switch (this) {
+        AppTab.forYou => l10n.forYou,
+        AppTab.search => l10n.search,
+        AppTab.queue => l10n.queue,
+      };
+  String title(L10n l10n) => label(l10n);
+}
+
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
+
+class HomeShell extends ConsumerStatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  ConsumerState<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends ConsumerState<HomeShell> {
+  int _index = 0;
+
+  void _onTabSelected(int i) {
+    setState(() => _index = i);
+    if (i == 0) {
+      ref.invalidate(recommendationProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = ref.watch(l10nProvider);
+    final tab = AppTab.values[_index];
+    final wide = MediaQuery.sizeOf(context).width >= 800;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          tab.title(l10n).toUpperCase(),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.4,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.translate_rounded),
+            tooltip: l10n.changeLanguage,
+            onPressed: () {
+              final current = ref.read(languageProvider);
+              ref.read(languageProvider.notifier).state =
+                  current == 'en' ? 'id' : 'en';
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              ref.watch(themeModeProvider) == ThemeMode.dark
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
+            ),
+            tooltip: l10n.changeTheme,
+            onPressed: () {
+              final current = ref.read(themeModeProvider);
+              ref.read(themeModeProvider.notifier).state =
+                  current == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: SafeArea(
+        child: wide ? _wideLayout(tab, l10n) : _narrowLayout(tab, l10n),
+      ),
+    );
+  }
+
+  Widget _narrowLayout(AppTab tab, L10n l10n) {
+    return Column(
+      children: [
+        Expanded(child: _body(tab)),
+        const MiniPlayer(),
+        _PillNav(
+          selected: _index,
+          l10n: l10n,
+          onSelected: _onTabSelected,
+        ),
+      ],
+    );
+  }
+
+  Widget _wideLayout(AppTab tab, L10n l10n) {
+    return Row(
+      children: [
+        NavigationRail(
+          selectedIndex: _index,
+          onDestinationSelected: _onTabSelected,
+          leading: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Icon(Icons.graphic_eq_rounded,
+                size: 30, color: Theme.of(context).colorScheme.primary),
+          ),
+          destinations: [
+            for (final t in AppTab.values)
+              NavigationRailDestination(
+                icon: Icon(t.icon),
+                label: Text(t.label(l10n)),
+              ),
+          ],
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: Column(
+            children: [
+              Expanded(child: _body(tab)),
+              const MiniPlayer(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _body(AppTab tab) {
+    return IndexedStack(
+      index: _index,
+      children: const [ForYouScreen(), SearchScreen(), QueueScreen()],
+    );
+  }
+}
+
+class _PillNav extends StatelessWidget {
+  const _PillNav({required this.selected, required this.l10n, required this.onSelected});
+
+  final int selected;
+  final L10n l10n;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Container(
+        height: 54,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          children: [
+            for (var i = 0; i < AppTab.values.length; i++)
+              Expanded(
+                child: _NavItem(
+                  icon: AppTab.values[i].icon,
+                  label: AppTab.values[i].label(l10n),
+                  selected: selected == i,
+                  onTap: () => onSelected(i),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? scheme.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: selected ? scheme.onPrimary : scheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

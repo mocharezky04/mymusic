@@ -1,0 +1,42 @@
+# Flutter / Dart
+app/.dart_tool/
+app/build/
+app/.flutter-plugins*
+app/.packages
+app/*.iml
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/app/release.jks
+app/ios/
+app/linux/
+app/macos/
+app/windows/
+app/.idea/
+
+# Backend
+backend/.venv/
+backend/.cache/
+backend/data/
+backend/.env
+backend/server.log
+backend/server.err.log
+backend/uvicorn_out.log
+backend/uvicorn_err.log
+backend/.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Web
+backend/web/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
+
+# Screenshots (bukti testing, bukan source code)
+docs/screenshots/
