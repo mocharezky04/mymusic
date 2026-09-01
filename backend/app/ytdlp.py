@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -147,6 +148,8 @@ async def search(query: str, limit: int, prefix: str) -> list[dict]:
 
 
 async def extract_stream(video_id: str, quality: str) -> dict:
+    logger.info("JS runtimes: node=%s deno=%s bun=%s",
+        shutil.which("node"), shutil.which("deno"), shutil.which("bun"))
     url = f"https://www.youtube.com/watch?v={video_id}"
     max_abr = _parse_abr(quality)
     errors: list[str] = []
