@@ -39,7 +39,7 @@ def _base_opts() -> dict:
         "no_warnings": True,
         "no_call_home": True,
         "cachedir": tempfile.gettempdir(),
-        "extractor_args": {"youtube": {"player_client": ["ios", "android"]}},
+        "extractor_args": {"youtube": {"player_client": ["tv_simply", "android_vr", "ios"]}},
     }
     cookie_path = _cookiefile_path()
     if cookie_path:

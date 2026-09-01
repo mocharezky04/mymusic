@@ -45,5 +45,6 @@ def test_base_opts_has_player_client(monkeypatch):
     monkeypatch.setattr("app.ytdlp.get_settings", lambda: Settings())
     opts = _base_opts()
     pc = opts["extractor_args"]["youtube"]["player_client"]
+    assert pc[0] == "tv_simply"
+    assert "android_vr" in pc
     assert "ios" in pc
-    assert "android" in pc
