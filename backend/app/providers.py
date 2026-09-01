@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from urllib.parse import quote
 
@@ -7,7 +6,7 @@ import httpx
 
 from .config import get_settings
 from .models import Track
-from .ytdlp import _run, normalize_entry, search
+from .ytdlp import _extract_info, normalize_entry, search
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,10 @@ async def search_youtube(query: str, limit: int) -> list[Track]:
 
 
 async def search_ytmusic(query: str, limit: int) -> list[Track]:
-    out = await _run(["--flat-playlist", "-J", f"https://music.youtube.com/search?q={quote(query)}"])
-    data = json.loads(out)
+    data = await _extract_info(
+        f"https://music.youtube.com/search?q={quote(query)}",
+        {"extract_flat": True},
+    )
     tracks = []
     for entry in data.get("entries") or []:
         video_id = entry.get("id")
