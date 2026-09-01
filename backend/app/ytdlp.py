@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 _COOKIE_FILENAME = "yt_cookies.txt"
 
-_FORCED_CLIENTS = {"youtube": {"player_client": ["tv_simply", "android_vr", "ios"]}}
+_FORCED_CLIENTS = {"youtube": {"player_client": ["tv", "android_vr", "tv_simply"]}}
 
 
 class YtDlpError(Exception):
