@@ -132,6 +132,7 @@ class PlayerController extends Notifier<PlayerState> {
   int _localPlaySeq = 0;
   int _lastRecordedIndex = -1;
   bool _applying = false;
+  final Set<String> _failedVideos = {};
 
   @override
   PlayerState build() {
@@ -262,9 +263,12 @@ class PlayerController extends Notifier<PlayerState> {
     }
   }
 
-  Future<String> _resolve(Track track) async {
+  Future<String> _resolve(Track track, {bool noRetry = false}) async {
     final cached = _srcCache[track.id];
     if (cached != null) return cached;
+    if (_failedVideos.contains(track.id)) {
+      throw Exception('previously failed');
+    }
     final download =
         await ref.read(dbProvider).downloadFor(track.id, track.source.apiValue);
     if (download != null) return 'file://${download.filePath}';
@@ -273,11 +277,20 @@ class PlayerController extends Notifier<PlayerState> {
       _srcCache[track.id] = url;
       return url;
     } catch (e) {
+      if (noRetry) {
+        _failedVideos.add(track.id);
+        rethrow;
+      }
       debugPrint('stream: resolve failed for ${track.title}, retrying in 2s: $e');
       await Future<void>.delayed(const Duration(seconds: 2));
-      final url = await resolveStreamUrl(track.id);
-      _srcCache[track.id] = url;
-      return url;
+      try {
+        final url = await resolveStreamUrl(track.id);
+        _srcCache[track.id] = url;
+        return url;
+      } catch (e2) {
+        _failedVideos.add(track.id);
+        rethrow;
+      }
     }
   }
 
@@ -289,7 +302,7 @@ class PlayerController extends Notifier<PlayerState> {
       final startTrack = order[startIndex];
       String startUrl;
       try {
-        startUrl = await _resolve(startTrack);
+        startUrl = await _resolve(startTrack, noRetry: true);
       } catch (e) {
         debugPrint('stream: failed to resolve start track: $e');
         state = state.copyWith(error: 'Failed to load ${startTrack.title}');

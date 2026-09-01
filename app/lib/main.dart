@@ -162,6 +162,17 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
       );
     });
 
+    ref.listen<PlayerState>(playerControllerProvider, (prev, next) {
+      if (next.error != null && next.error != prev?.error) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(SnackBar(
+          content: Text(next.error!),
+          behavior: SnackBarBehavior.floating,
+        ));
+        ref.read(playerControllerProvider.notifier).clearError();
+      }
+    });
+
     final app = MaterialApp(
       key: ValueKey(themeMode),
       title: 'MyMusic',

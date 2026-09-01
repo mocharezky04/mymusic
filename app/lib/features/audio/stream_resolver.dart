@@ -40,7 +40,7 @@ Future<String> _fromLocal(String videoId) async {
     for (final (label, client) in clients) {
       StreamManifest manifest;
       try {
-        manifest = await yt.videos.streams.getManifest(videoId, ytClients: [client]);
+        manifest = await yt.videos.streams.getManifest(videoId, ytClients: [client]).timeout(const Duration(seconds: 8));
       } catch (e) {
         debugPrint('stream: client $label manifest failed: $e');
         continue;
