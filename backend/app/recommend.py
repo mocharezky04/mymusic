@@ -142,7 +142,9 @@ async def recommend(
     payload: RecommendationRequest,
 ) -> RecommendationResponse:
     seeds = [s.strip() for s in payload.seeds if s and s.strip()][:8]
-    if not seeds:
+    has_seeds = bool(seeds)
+    has_seed_tracks = bool(payload.seed_tracks)
+    if not has_seeds and not has_seed_tracks:
         return RecommendationResponse(recommendations=[])
 
     limit = max(1, min(payload.limit or 13, 25))
@@ -157,18 +159,24 @@ async def recommend(
     if get_settings().lastfm_api_key and payload.seed_tracks:
         for st in payload.seed_tracks[:3]:
             similar_tracks.extend(
-                await _lastfm_similar_tracks(st.get("artist", ""), st.get("title", ""), 6)
+                await _lastfm_similar_tracks(st.artist or "", st.title or "", 6)
             )
 
     if get_settings().lastfm_api_key:
         candidates = build_candidates(seeds, similar_tracks, similar_artists=similar_artists)
     else:
         candidates = []
+        seen_artists: set[str] = set()
         for st in payload.seed_tracks:
-            artist = (st.get("artist") or "").strip()
-            title = (st.get("title") or "").strip()
+            artist = (st.artist or "").strip()
+            title = (st.title or "").strip()
             if title:
                 candidates.append((artist, title))
+            if artist and artist.lower() not in seen_artists:
+                seen_artists.add(artist.lower())
+        for artist in list(seen_artists)[:3]:
+            for q in _related_queries(artist):
+                candidates.append(("", q))
         for s in seeds:
             for q in _related_queries(s):
                 candidates.append(("", q))
