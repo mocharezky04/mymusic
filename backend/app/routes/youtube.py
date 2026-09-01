@@ -1,18 +1,14 @@
-import secrets
+import base64
+import hmac
+import hashlib
+import json
 import time
 from html import escape
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from ..account_store import (
-    delete_account,
-    get_account,
-    list_accounts,
-    update_profile,
-    upsert_account,
-)
 from ..cache import cache
 from ..config import get_settings
 from ..google_yt import (
@@ -30,7 +26,6 @@ from ..google_yt import (
     refresh_access_token,
 )
 from ..models import (
-    DisconnectRequest,
     YoutubeAccount,
     YoutubeAccountsResponse,
     YoutubePlaylist,
@@ -41,8 +36,7 @@ from ..ytdlp import YtDlpError, extract_mix
 
 router = APIRouter(tags=["youtube"])
 
-_PENDING_TTL = 600
-pending_flows: dict[str, dict] = {}
+_STATE_TTL = 900
 _token_cache: dict[str, tuple[str, float]] = {}
 
 
@@ -60,27 +54,48 @@ def _require_config() -> None:
         )
 
 
-def _resolve_account(email: str) -> dict:
-    account = get_account(email)
-    if account is None:
-        raise HTTPException(status_code=404, detail="Akun YouTube tidak ditemukan")
-    return account
+def _hmac_secret() -> bytes:
+    settings = get_settings()
+    key = settings.api_key or settings.google_client_secret or "mymusic-dev-fallback"
+    return key.encode()
 
 
-def _prune_pending() -> None:
-    now = time.monotonic()
-    expired = [s for s, f in pending_flows.items() if now - f["created"] > _PENDING_TTL]
-    for state in expired:
-        pending_flows.pop(state, None)
+def _sign_state(payload_b64: str) -> str:
+    sig = hmac.new(_hmac_secret(), payload_b64.encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{payload_b64}.{sig}"
 
 
-async def _access_token(account: dict) -> str:
-    now = time.monotonic()
-    cached = _token_cache.get(account["email"])
-    if cached and cached[1] > now + 30:
+def _verify_state(state: str) -> dict | None:
+    try:
+        payload_b64, sig = state.split(".", 1)
+    except ValueError:
+        return None
+    expected = hmac.new(_hmac_secret(), payload_b64.encode(), hashlib.sha256).hexdigest()[:32]
+    if not hmac.compare_digest(sig, expected):
+        return None
+    try:
+        padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded))
+    except Exception:
+        return None
+    if time.time() - payload.get("t", 0) > _STATE_TTL:
+        return None
+    return payload
+
+
+def _extract_refresh_token(request: Request) -> str | None:
+    header = request.headers.get("x-refresh-token")
+    if header:
+        return header
+    return request.query_params.get("token")
+
+
+async def _access_token(refresh_token: str) -> str:
+    cached = _token_cache.get(refresh_token)
+    if cached and cached[1] > time.time() + 30:
         return cached[0]
     try:
-        tokens = await refresh_access_token(account["refresh_token"])
+        tokens = await refresh_access_token(refresh_token)
     except GoogleApiError as exc:
         raise HTTPException(
             status_code=502,
@@ -88,7 +103,7 @@ async def _access_token(account: dict) -> str:
         ) from exc
     access_token = tokens.get("access_token", "")
     expires_in = int(tokens.get("expires_in", 3600))
-    _token_cache[account["email"]] = (access_token, now + expires_in)
+    _token_cache[refresh_token] = (access_token, time.time() + expires_in)
     return access_token
 
 
@@ -124,26 +139,27 @@ background:#0b1220;color:#e2e8f0;display:flex;min-height:100vh;align-items:cente
 @router.get("/youtube/auth/start", response_class=RedirectResponse)
 async def auth_start() -> RedirectResponse:
     _require_config()
-    _prune_pending()
-    state = secrets.token_urlsafe(18)
     verifier = new_code_verifier()
     challenge = code_challenge(verifier)
-    pending_flows[state] = {"verifier": verifier, "created": time.monotonic()}
+    payload = base64.urlsafe_b64encode(
+        json.dumps({"v": verifier, "t": int(time.time())}).encode()
+    ).decode().rstrip("=")
+    state = _sign_state(payload)
     return RedirectResponse(build_auth_url(state, challenge), status_code=302)
 
 
 @router.get("/youtube/callback", response_class=HTMLResponse)
 async def callback(code: str, state: str) -> HTMLResponse:
     _require_config()
-    flow = pending_flows.pop(state, None)
-    if flow is None:
+    payload = _verify_state(state)
+    if payload is None:
         return _page(
             "Sesi kedaluwarsa",
             "Tautan login tidak valid atau sudah kedaluwarsa. Buka ulang fitur Tambah akun di app.",
             False,
         )
     try:
-        tokens = await exchange_code(code, flow["verifier"])
+        tokens = await exchange_code(code, payload["v"])
         access_token = tokens.get("access_token", "")
         refresh_token = tokens.get("refresh_token", "")
         if not refresh_token:
@@ -160,14 +176,15 @@ async def callback(code: str, state: str) -> HTMLResponse:
             "Terjadi kesalahan saat bertukar izin dengan Google. Coba lagi.",
             False,
         )
-    upsert_account(
-        email,
-        info["channel_id"],
-        info["channel_title"],
-        info["avatar_url"],
-        refresh_token,
+    deep_link = (
+        f"mymusic://oauth/callback"
+        f"?email={quote(email)}"
+        f"&channel_id={quote(info.get('channel_id', ''))}"
+        f"&channel_title={quote(info.get('channel_title', ''))}"
+        f"&avatar_url={quote(info.get('avatar_url', ''))}"
+        f"&refresh_token={quote(refresh_token)}"
+        f"&state={quote(state)}"
     )
-    deep_link = f"mymusic://youtube-connected?email={quote(email)}&name={quote(info['channel_title'])}"
     return _page(
         "Akun terhubung",
         f"@{email} berhasil ditautkan. MyMusic akan terbuka dalam beberapa detik.",
@@ -176,44 +193,22 @@ async def callback(code: str, state: str) -> HTMLResponse:
     )
 
 
-@router.post("/youtube/profiles/refresh", response_model=YoutubeAccount)
-async def refresh_profile(payload: DisconnectRequest) -> YoutubeAccount:
-    _require_config()
-    acc = _resolve_account(payload.account)
-    token = await _access_token(acc)
-    try:
-        info = await fetch_profile(token)
-    except GoogleApiError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail="Gagal mengambil profil dari YouTube. Coba lagi.",
-        ) from exc
-    update_profile(payload.account, info["channel_id"], info["channel_title"], info["avatar_url"])
-    return YoutubeAccount(
-        email=payload.account,
-        channel_id=info["channel_id"],
-        channel_title=info["channel_title"],
-        avatar_url=info["avatar_url"],
-    )
-
-
 @router.get("/youtube/me", response_model=YoutubeAccountsResponse)
 async def me() -> YoutubeAccountsResponse:
     _require_config()
-    return YoutubeAccountsResponse(
-        accounts=[YoutubeAccount(**a) for a in list_accounts()]
-    )
+    return YoutubeAccountsResponse(accounts=[])
 
 
 @router.get("/youtube/playlists", response_model=YoutubePlaylistsResponse)
 async def playlists(
-    account: str = Query(min_length=3, max_length=320),
+    request: Request,
+    account: str = Query(default="", max_length=320),
 ) -> YoutubePlaylistsResponse:
     _require_config()
-    acc = _resolve_account(account)
-    if not acc["channel_id"]:
-        return YoutubePlaylistsResponse(account=account, playlists=[])
-    token = await _access_token(acc)
+    refresh_token = _extract_refresh_token(request)
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="X-Refresh-Token header required")
+    token = await _access_token(refresh_token)
     try:
         items = await fetch_playlists(token)
         liked_count = await fetch_liked_count(token)
@@ -224,7 +219,7 @@ async def playlists(
             id="LL",
             title="Punya saya",
             count=liked_count,
-            owner=acc["channel_title"],
+            owner="",
         )
     ]
     result.extend(
@@ -243,12 +238,15 @@ async def playlists(
 @router.get("/youtube/playlists/{playlist_id}/tracks", response_model=YoutubeTracksResponse)
 async def playlist_tracks(
     playlist_id: str,
-    account: str = Query(min_length=3, max_length=320),
+    request: Request,
+    account: str = Query(default="", max_length=320),
     page_token: str | None = None,
 ) -> YoutubeTracksResponse:
     _require_config()
-    acc = _resolve_account(account)
-    token = await _access_token(acc)
+    refresh_token = _extract_refresh_token(request)
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="X-Refresh-Token header required")
+    token = await _access_token(refresh_token)
     try:
         if playlist_id == "LL":
             tracks, next_page_token = await fetch_liked_tracks(token, page_token)
@@ -266,16 +264,15 @@ async def playlist_tracks(
 
 @router.get("/youtube/mix", response_model=YoutubeTracksResponse)
 async def youtube_mix(
+    request: Request,
     mix_id: str = Query(min_length=3, max_length=64),
-    account: str = Query(min_length=3, max_length=320),
+    account: str = Query(default="", max_length=320),
 ) -> YoutubeTracksResponse:
     _require_config()
-    _resolve_account(account)
     cache_key = f"mix:{mix_id}"
     cached = await cache.get(cache_key)
     if cached:
-        import json as _json
-        tracks_data = _json.loads(cached)
+        tracks_data = json.loads(cached)
         from ..models import Track
         tracks = [Track(**t) for t in tracks_data]
         return YoutubeTracksResponse(
@@ -285,7 +282,6 @@ async def youtube_mix(
         entries = await extract_mix(mix_id)
     except YtDlpError as exc:
         raise HTTPException(status_code=502, detail=f"Gagal mengambil mix: {exc}") from exc
-    import json as _json
     from ..models import Track
     tracks = [
         Track(
@@ -300,17 +296,34 @@ async def youtube_mix(
         )
         for e in entries
     ]
-    await cache.set(cache_key, _json.dumps([t.model_dump() for t in tracks]))
+    await cache.set(cache_key, json.dumps([t.model_dump() for t in tracks]))
     return YoutubeTracksResponse(
         account=account, playlist_id=mix_id, tracks=tracks
     )
 
 
-@router.post("/youtube/disconnect")
-async def disconnect(payload: DisconnectRequest) -> dict:
+@router.post("/youtube/profiles/refresh")
+async def refresh_profile(request: Request) -> YoutubeAccount:
     _require_config()
-    deleted = delete_account(payload.account)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Akun YouTube tidak ditemukan")
-    _token_cache.pop(payload.account, None)
+    refresh_token = _extract_refresh_token(request)
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="X-Refresh-Token header required")
+    token = await _access_token(refresh_token)
+    try:
+        info = await fetch_profile(token)
+    except GoogleApiError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Gagal mengambil profil dari YouTube. Coba lagi.",
+        ) from exc
+    return YoutubeAccount(
+        email="",
+        channel_id=info["channel_id"],
+        channel_title=info["channel_title"],
+        avatar_url=info["avatar_url"],
+    )
+
+
+@router.post("/youtube/disconnect")
+async def disconnect() -> dict:
     return {"ok": True}
