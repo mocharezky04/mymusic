@@ -15,6 +15,8 @@ import 'features/forYou/account_providers.dart';
 import 'features/player/player_provider.dart';
 import 'features/shell/home_shell.dart';
 
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AudioPlayerHandler? serviceHandler;
@@ -164,8 +166,7 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
 
     ref.listen<PlayerState>(playerControllerProvider, (prev, next) {
       if (next.error != null && next.error != prev?.error) {
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.showSnackBar(SnackBar(
+        scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
           content: Text(next.error!),
           behavior: SnackBarBehavior.floating,
         ));
@@ -175,6 +176,7 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
 
     final app = MaterialApp(
       key: ValueKey(themeMode),
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'MyMusic',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
