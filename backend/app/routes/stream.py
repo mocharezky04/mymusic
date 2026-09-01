@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from ..cache import cache
 from ..models import StreamInfo
-from ..ytdlp import YtDlpError, extract_stream, format_for
+from ..ytdlp import YtDlpError, extract_stream
 
 router = APIRouter(tags=["stream"])
 
@@ -26,9 +26,9 @@ async def stream(
         return StreamInfo(**json.loads(cached))
 
     try:
-        info = await extract_stream(video_id, format_for(quality))
+        info = await extract_stream(video_id, quality)
     except YtDlpError as exc:
-        raise HTTPException(status_code=502, detail="stream extraction failed") from exc
+        raise HTTPException(status_code=502, detail=f"stream extraction failed: {exc}") from exc
 
     payload = StreamInfo(video_id=video_id, **info)
     await cache.set(key, payload.model_dump_json())

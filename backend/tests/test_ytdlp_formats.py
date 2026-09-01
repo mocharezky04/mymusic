@@ -30,3 +30,22 @@ def test_pick_audio_raises_when_no_playable():
         assert False, "should have raised"
     except YtDlpError as e:
         assert "no playable" in str(e)
+
+
+def test_pick_audio_ignores_storyboards():
+    formats = [
+        {"url": "sb0", "ext": "mhtml", "acodec": "none", "vcodec": "none", "protocol": "mhtml"},
+        {"url": "u1", "acodec": "mp4a.40.2", "vcodec": "avc1", "abr": 128, "ext": "mp4", "height": 360},
+    ]
+    result = _pick_audio_format(formats)
+    assert result["url"] == "u1"
+
+
+def test_pick_audio_respects_max_abr():
+    formats = [
+        {"url": "u1", "acodec": "mp4a.40.2", "vcodec": "none", "abr": 256, "ext": "m4a"},
+        {"url": "u2", "acodec": "mp4a.40.2", "vcodec": "none", "abr": 96, "ext": "m4a"},
+    ]
+    result = _pick_audio_format(formats, max_abr=128)
+    assert result["url"] == "u2"
+    assert result["abr"] == 96

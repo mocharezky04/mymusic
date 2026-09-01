@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import logging
 import tempfile
 from pathlib import Path
 
@@ -8,7 +9,11 @@ from yt_dlp.utils import DownloadError
 
 from .config import get_settings
 
+logger = logging.getLogger(__name__)
+
 _COOKIE_FILENAME = "yt_cookies.txt"
+
+_FORCED_CLIENTS = {"youtube": {"player_client": ["tv_simply", "android_vr", "ios"]}}
 
 
 class YtDlpError(Exception):
@@ -33,23 +38,88 @@ def _cookiefile_path() -> str | None:
     return str(dest)
 
 
-def _base_opts() -> dict:
-    opts: dict = {
-        "quiet": True,
-        "no_warnings": True,
-        "no_call_home": True,
-        "cachedir": tempfile.gettempdir(),
-        "extractor_args": {"youtube": {"player_client": ["tv_simply", "android_vr", "ios"]}},
-    }
+def _is_storyboard(f: dict) -> bool:
+    if (f.get("ext") or "").lower() == "mhtml":
+        return True
+    return (f.get("protocol") or "").startswith("mhtml")
+
+
+def _pick_audio_format(formats: list[dict], max_abr: int | None = None) -> dict:
+    playable = [f for f in formats if f.get("url") and not _is_storyboard(f)]
+
+    def _audio_only(pool: list[dict]) -> list[dict]:
+        return [
+            f for f in pool
+            if f.get("acodec") not in (None, "none", "")
+            and f.get("vcodec") in (None, "none", "")
+        ]
+
+    def _muxed(pool: list[dict]) -> list[dict]:
+        return [
+            f for f in pool
+            if f.get("acodec") not in (None, "none", "")
+            and f.get("vcodec") not in (None, "none", "")
+        ]
+
+    def _best(pool: list[dict]) -> dict | None:
+        if not pool:
+            return None
+        pool.sort(key=lambda f: f.get("abr") or 0, reverse=True)
+        if max_abr is not None:
+            filtered = [f for f in pool if (f.get("abr") or 0) <= max_abr]
+            if filtered:
+                pool = filtered
+        m4a = [f for f in pool if f.get("ext") == "m4a"]
+        return m4a[0] if m4a else pool[0]
+
+    result = _best(_audio_only(playable))
+    if result:
+        return result
+    result = _best(_muxed(playable))
+    if result:
+        return result
+    raise YtDlpError("no playable audio format extracted")
+
+
+def _stream_variants() -> list[dict]:
+    settings = get_settings()
     cookie_path = _cookiefile_path()
-    if cookie_path:
-        opts["cookiefile"] = cookie_path
-    return opts
+    has_cookies = cookie_path is not None
+    variants: list[dict] = []
+    if has_cookies:
+        variants.append({
+            "label": "forced-clients+cookies",
+            "extractor_args": _FORCED_CLIENTS,
+            "cookiefile": cookie_path,
+        })
+        variants.append({
+            "label": "default-clients+cookies",
+            "cookiefile": cookie_path,
+        })
+        variants.append({
+            "label": "forced-clients-no-cookie",
+            "extractor_args": _FORCED_CLIENTS,
+        })
+    else:
+        variants.append({
+            "label": "forced-clients",
+            "extractor_args": _FORCED_CLIENTS,
+        })
+        variants.append({
+            "label": "default-clients",
+        })
+    return variants
 
 
 async def _extract_info(url: str, opts: dict) -> dict:
     settings = get_settings()
-    merged = {**_base_opts(), "cachedir": settings.ytdlp_cache_dir, **opts}
+    base = {
+        "quiet": True,
+        "no_warnings": True,
+        "no_call_home": True,
+        "cachedir": settings.ytdlp_cache_dir,
+    }
+    merged = {**base, **opts}
 
     def _work():
         with yt_dlp.YoutubeDL(merged) as ydl:
@@ -76,57 +146,31 @@ async def search(query: str, limit: int, prefix: str) -> list[dict]:
     return list(info.get("entries") or [])
 
 
-def _pick_audio_format(formats: list[dict]) -> dict:
-    playable = [f for f in formats if f.get("url")]
-    audio_only = [
-        f for f in playable
-        if f.get("acodec") not in (None, "none", "")
-        and f.get("vcodec") in (None, "none", "")
-    ]
-    if audio_only:
-        audio_only.sort(key=lambda f: f.get("abr") or 0, reverse=True)
-        m4a = [f for f in audio_only if f.get("ext") == "m4a"]
-        return m4a[0] if m4a else audio_only[0]
-    muxed = [f for f in playable if f.get("acodec") not in (None, "none", "")]
-    if muxed:
-        muxed.sort(
-            key=lambda f: (f.get("abr") or 0, -(f.get("height") or 0)),
-            reverse=True,
-        )
-        return muxed[0]
-    raise YtDlpError("no playable audio format extracted")
-
-
-async def extract_stream(video_id: str, format_spec: str) -> dict:
+async def extract_stream(video_id: str, quality: str) -> dict:
     url = f"https://www.youtube.com/watch?v={video_id}"
-    try:
-        info = await _extract_info(
-            url,
-            {"format": format_spec, "noplaylist": True},
-        )
-        stream_url = info.get("url")
-        if not stream_url:
-            raise YtDlpError("no playable url extracted")
-        return {
-            "url": stream_url,
-            "ext": info.get("ext", ""),
-            "abr": info.get("abr"),
-            "title": info.get("title", ""),
-        }
-    except YtDlpError as exc:
-        if "Requested format is not available" not in str(exc):
-            raise
-    info = await _extract_info(url, {"noplaylist": True})
-    fmt = _pick_audio_format(info.get("formats") or [])
-    stream_url = fmt.get("url")
-    if not stream_url:
-        raise YtDlpError("no playable url extracted")
-    return {
-        "url": stream_url,
-        "ext": fmt.get("ext", ""),
-        "abr": fmt.get("abr"),
-        "title": info.get("title", ""),
-    }
+    max_abr = _parse_abr(quality)
+    errors: list[str] = []
+    for variant in _stream_variants():
+        label = variant.pop("label")
+        opts = {"format": "b*", "noplaylist": True, **variant}
+        try:
+            info = await _extract_info(url, opts)
+            fmt = _pick_audio_format(info.get("formats") or [], max_abr=max_abr)
+            stream_url = fmt.get("url")
+            if not stream_url:
+                raise YtDlpError("no playable url in chosen format")
+            logger.info("stream[%s] %s succeeded", label, video_id)
+            return {
+                "url": stream_url,
+                "ext": fmt.get("ext", ""),
+                "abr": fmt.get("abr"),
+                "title": info.get("title", ""),
+            }
+        except YtDlpError as exc:
+            err_msg = f"{label}: {str(exc)[-200:]}"
+            logger.warning("stream[%s] %s failed: %s", label, video_id, str(exc)[-200:])
+            errors.append(err_msg)
+    raise YtDlpError(" | ".join(errors))
 
 
 async def extract_mix(mix_id: str) -> list[dict]:
@@ -162,20 +206,6 @@ def _thumbnail(entry: dict) -> str:
     if thumbs:
         return thumbs[-1].get("url", "")
     return ""
-
-
-def format_for(quality: str) -> str:
-    abr = _parse_abr(quality)
-    if abr is None:
-        return "bestaudio[ext=m4a]/bestaudio[acodec!=opus]/bestaudio/best"
-    return (
-        f"bestaudio[ext=m4a][abr<={abr}]"
-        f"/bestaudio[abr<={abr}]"
-        f"/bestaudio[ext=m4a]"
-        f"/bestaudio[acodec!=opus]"
-        f"/bestaudio"
-        f"/best"
-    )
 
 
 def _parse_abr(quality: str) -> int | None:
