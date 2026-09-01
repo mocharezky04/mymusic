@@ -1,6 +1,7 @@
 
 
 
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     search_limit: int = 10
 
     redis_url: str | None = None
-    ytdlp_cache_dir: str = str(BASE_DIR / ".cache")
+    ytdlp_cache_dir: str = tempfile.gettempdir()
     data_dir: str = str(BASE_DIR / "data")
 
     lastfm_api_key: str | None = None
