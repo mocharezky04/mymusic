@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     youtube_callback_uri: str = "http://127.0.0.1:8000/youtube/callback"
 
     api_key: str | None = None
+    youtube_cookies: str | None = None
 
     @field_validator(
         "youtube_callback_uri",

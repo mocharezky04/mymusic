@@ -1,23 +1,50 @@
 import asyncio
+import hashlib
 import tempfile
+from pathlib import Path
 
 import yt_dlp
 from yt_dlp.utils import DownloadError
 
 from .config import get_settings
 
+_COOKIE_FILENAME = "yt_cookies.txt"
+
 
 class YtDlpError(Exception):
     pass
 
 
+def _cookiefile_path() -> str | None:
+    settings = get_settings()
+    raw = settings.youtube_cookies
+    if not raw:
+        return None
+    content = raw.strip()
+    if not content:
+        return None
+    dest = Path(tempfile.gettempdir()) / _COOKIE_FILENAME
+    new_hash = hashlib.sha256(content.encode()).hexdigest()
+    if dest.exists():
+        existing_hash = hashlib.sha256(dest.read_bytes()).hexdigest()
+        if existing_hash == new_hash:
+            return str(dest)
+    dest.write_text(content, encoding="utf-8")
+    return str(dest)
+
+
 def _base_opts() -> dict:
-    return {
+    opts: dict = {
         "quiet": True,
         "no_warnings": True,
         "no_call_home": True,
         "cachedir": tempfile.gettempdir(),
+        "extractor_args": {"youtube": {"player_client": ["ios", "android"]}},
     }
+    cookie_path = _cookiefile_path()
+    if cookie_path:
+        opts["cookiefile"] = cookie_path
+    return opts
 
 
 async def _extract_info(url: str, opts: dict) -> dict:
@@ -32,7 +59,13 @@ async def _extract_info(url: str, opts: dict) -> dict:
     try:
         return await asyncio.to_thread(_work)
     except DownloadError as exc:
-        raise YtDlpError(str(exc)[-500:] or "yt-dlp extraction failed") from exc
+        msg = str(exc)[-500:] or "yt-dlp extraction failed"
+        if "Sign in to confirm" in msg:
+            msg = (
+                "YouTube bot-check: cookies belum dipasang / kedaluwarsa "
+                "(set YOUTUBE_COOKIES di env)"
+            )
+        raise YtDlpError(msg) from exc
 
 
 async def search(query: str, limit: int, prefix: str) -> list[dict]:
