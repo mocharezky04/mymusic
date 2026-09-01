@@ -5,8 +5,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models.dart';
-import '../../features/search/search_providers.dart' show apiProvider;
 import '../audio/audio_handler.dart';
+import '../audio/stream_resolver.dart';
 import '../forYou/history_providers.dart';
 import '../storage/app_db.dart';
 import '../sync/tab_sync.dart';
@@ -266,9 +266,9 @@ class PlayerController extends Notifier<PlayerState> {
     final download =
         await ref.read(dbProvider).downloadFor(track.id, track.source.apiValue);
     if (download != null) return 'file://${download.filePath}';
-    final info = await ref.read(apiProvider).streamInfo(track.id);
-    _srcCache[track.id] = info.url;
-    return info.url;
+    final url = await resolveStreamUrl(track.id);
+    _srcCache[track.id] = url;
+    return url;
   }
 
   Future<bool> _applyQueue(List<Track> order, {required int startIndex, required bool autoPlay}) async {

@@ -7,9 +7,9 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../lyrics/lyrics_sheet.dart';
 import '../search/eq_bars.dart';
-import '../search/search_providers.dart' show apiProvider;
 import '../search/track_tile.dart';
 import '../storage/download_service.dart';
+import '../audio/stream_resolver.dart';
 import 'player_provider.dart';
 
 String _fmt(Duration d) {
@@ -411,10 +411,10 @@ Future<void> _start() async {
       _progress = 0;
     });
     try {
-      final info = await ref.read(apiProvider).streamInfo(widget.track.id);
+      final url = await resolveStreamUrl(widget.track.id);
       await service.download(
         widget.track,
-        info.url,
+        url,
         onProgress: (received, total) {
           if (mounted && total > 0) {
             setState(() => _progress = received / total);

@@ -46,6 +46,7 @@ dependencies:
   permission_handler: ^13.0.1
   url_launcher: ^6.3.2
   shared_preferences: ^2.3.0
+  youtube_explode_dart: ^2.3.5
 
 dev_dependencies:
   flutter_test:
