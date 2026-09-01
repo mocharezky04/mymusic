@@ -76,19 +76,55 @@ async def search(query: str, limit: int, prefix: str) -> list[dict]:
     return list(info.get("entries") or [])
 
 
+def _pick_audio_format(formats: list[dict]) -> dict:
+    playable = [f for f in formats if f.get("url")]
+    audio_only = [
+        f for f in playable
+        if f.get("acodec") not in (None, "none", "")
+        and f.get("vcodec") in (None, "none", "")
+    ]
+    if audio_only:
+        audio_only.sort(key=lambda f: f.get("abr") or 0, reverse=True)
+        m4a = [f for f in audio_only if f.get("ext") == "m4a"]
+        return m4a[0] if m4a else audio_only[0]
+    muxed = [f for f in playable if f.get("acodec") not in (None, "none", "")]
+    if muxed:
+        muxed.sort(
+            key=lambda f: (f.get("abr") or 0, -(f.get("height") or 0)),
+            reverse=True,
+        )
+        return muxed[0]
+    raise YtDlpError("no playable audio format extracted")
+
+
 async def extract_stream(video_id: str, format_spec: str) -> dict:
     url = f"https://www.youtube.com/watch?v={video_id}"
-    info = await _extract_info(
-        url,
-        {"format": format_spec, "noplaylist": True},
-    )
-    stream_url = info.get("url")
+    try:
+        info = await _extract_info(
+            url,
+            {"format": format_spec, "noplaylist": True},
+        )
+        stream_url = info.get("url")
+        if not stream_url:
+            raise YtDlpError("no playable url extracted")
+        return {
+            "url": stream_url,
+            "ext": info.get("ext", ""),
+            "abr": info.get("abr"),
+            "title": info.get("title", ""),
+        }
+    except YtDlpError as exc:
+        if "Requested format is not available" not in str(exc):
+            raise
+    info = await _extract_info(url, {"noplaylist": True})
+    fmt = _pick_audio_format(info.get("formats") or [])
+    stream_url = fmt.get("url")
     if not stream_url:
         raise YtDlpError("no playable url extracted")
     return {
         "url": stream_url,
-        "ext": info.get("ext", ""),
-        "abr": info.get("abr"),
+        "ext": fmt.get("ext", ""),
+        "abr": fmt.get("abr"),
         "title": info.get("title", ""),
     }
 
@@ -131,13 +167,14 @@ def _thumbnail(entry: dict) -> str:
 def format_for(quality: str) -> str:
     abr = _parse_abr(quality)
     if abr is None:
-        return "bestaudio[ext=m4a]/bestaudio[acodec!=opus]/bestaudio"
+        return "bestaudio[ext=m4a]/bestaudio[acodec!=opus]/bestaudio/best"
     return (
         f"bestaudio[ext=m4a][abr<={abr}]"
         f"/bestaudio[abr<={abr}]"
         f"/bestaudio[ext=m4a]"
         f"/bestaudio[acodec!=opus]"
         f"/bestaudio"
+        f"/best"
     )
 
 
