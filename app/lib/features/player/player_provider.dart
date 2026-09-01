@@ -267,15 +267,24 @@ class PlayerController extends Notifier<PlayerState> {
     final download =
         await ref.read(dbProvider).downloadFor(track.id, track.source.apiValue);
     if (download != null) return 'file://${download.filePath}';
-    final url = await resolveStreamUrl(track.id);
-    _srcCache[track.id] = url;
-    return url;
+    try {
+      final url = await resolveStreamUrl(track.id);
+      _srcCache[track.id] = url;
+      return url;
+    } catch (e) {
+      debugPrint('stream: resolve failed for ${track.title}, retrying in 2s: $e');
+      await Future<void>.delayed(const Duration(seconds: 2));
+      final url = await resolveStreamUrl(track.id);
+      _srcCache[track.id] = url;
+      return url;
+    }
   }
 
   Future<bool> _applyQueue(List<Track> order, {required int startIndex, required bool autoPlay}) async {
     if (order.isEmpty) return false;
+    _handler!.stop();
     _lastRecordedIndex = startIndex - 1;
-    state = state.copyWith(queue: order, index: startIndex, loading: true);
+    state = state.copyWith(queue: order, index: startIndex, loading: true, error: null);
     try {
       final items = <(Track, String)>[];
       for (var i = 0; i < order.length; i++) {
@@ -309,7 +318,8 @@ class PlayerController extends Notifier<PlayerState> {
       _persistQueue();
       return true;
     } on Exception {
-      state = state.copyWith(loading: false, error: 'Failed to load playback queue');
+      _handler!.stop();
+      state = state.copyWith(loading: false, playing: false, error: 'Failed to load playback queue');
       return false;
     }
   }
