@@ -30,24 +30,43 @@ Future<String> _fromBackend(String videoId, {String quality = '128k'}) async {
 }
 
 Future<String> _fromLocal(String videoId) async {
+  final clients = [
+    ('androidVr', YoutubeApiClient.androidVr),
+    ('ios', YoutubeApiClient.ios),
+    ('mweb', YoutubeApiClient.mweb),
+  ];
   final yt = YoutubeExplode();
   try {
-    StreamManifest manifest;
-    try {
-      manifest = await yt.videos.streams.getManifest(
-        videoId,
-        ytClients: [YoutubeApiClient.androidVr],
-      );
-    } catch (_) {
-      debugPrint('stream: androidVr client failed, trying default');
-      manifest = await yt.videos.streams.getManifest(videoId);
+    for (final (label, client) in clients) {
+      StreamManifest manifest;
+      try {
+        manifest = await yt.videos.streams.getManifest(videoId, ytClients: [client]);
+      } catch (e) {
+        debugPrint('stream: client $label manifest failed: $e');
+        continue;
+      }
+      final audio = manifest.audioOnly.withHighestBitrate();
+      try {
+        final probe = await Dio().getUri(
+          audio.url,
+          options: Options(
+            headers: {'Range': 'bytes=0-0'},
+            validateStatus: (s) => s != null,
+            sendTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        );
+        final status = probe.statusCode;
+        if (status == 200 || status == 206) {
+          debugPrint('stream: local ok ($label)');
+          return audio.url.toString();
+        }
+        debugPrint('stream: client $label url rejected: $status');
+      } catch (e) {
+        debugPrint('stream: client $label url probe failed: $e');
+      }
     }
-    final audio = manifest.audioOnly.withHighestBitrate();
-    debugPrint('stream: local fallback');
-    return audio.url.toString();
-  } catch (e) {
-    debugPrint('stream: local fallback failed: $e');
-    rethrow;
+    throw Exception('all local clients failed');
   } finally {
     yt.close();
   }
