@@ -671,13 +671,19 @@ class _PlaylistListTile extends ConsumerWidget {
 
 final playlistsProvider = FutureProvider.family<List<YoutubePlaylist>, String>((ref, email) async {
   final api = ref.read(apiProvider);
-  return api.youtubePlaylists(email);
+  final accounts = ref.read(accountsProvider).value ?? const <YoutubeAccount>[];
+  final match = accounts.where((a) => a.email == email);
+  final refreshToken = match.isNotEmpty ? match.first.refreshToken : null;
+  return api.youtubePlaylists(email, refreshToken: refreshToken);
 });
 
 final tracksProvider =
     FutureProvider.family<List<Track>, ({String playlistId, String account})>((ref, args) async {
   final api = ref.read(apiProvider);
-  return api.youtubeTracks(args.account, args.playlistId);
+  final accounts = ref.read(accountsProvider).value ?? const <YoutubeAccount>[];
+  final match = accounts.where((a) => a.email == args.account);
+  final refreshToken = match.isNotEmpty ? match.first.refreshToken : null;
+  return api.youtubeTracks(args.account, args.playlistId, refreshToken: refreshToken);
 });
 
 class _RecommendedSection extends ConsumerWidget {

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'core/l10n.dart';
+import 'core/models.dart';
 import 'core/theme.dart';
 import 'features/audio/audio_handler.dart';
 import 'features/forYou/account_providers.dart';
@@ -52,6 +53,7 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
   static const _channel = MethodChannel('mymusic/deeplink');
 
   String? _pendingEmail;
+  String? _pendingName;
 
   @override
   void initState() {
@@ -59,6 +61,9 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
     WidgetsBinding.instance.addObserver(this);
     _channel.setMethodCallHandler(_handleChannel);
     _channel.invokeMethod<String?>('getInitialLink').then(_processDeepLink);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadActiveAccount(ref);
+    });
   }
 
   @override
@@ -84,7 +89,29 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
   void _processDeepLink(String? uri) {
     if (uri == null || uri.isEmpty) return;
     final lower = uri.toLowerCase();
-    if (lower.startsWith('mymusic://youtube-connected')) {
+
+    if (lower.startsWith('mymusic://oauth/callback')) {
+      final email = _queryParam(uri, 'email') ?? '';
+      final channelId = _queryParam(uri, 'channel_id') ?? '';
+      final channelTitle = _queryParam(uri, 'channel_title') ?? '';
+      final avatarUrl = _queryParam(uri, 'avatar_url') ?? '';
+      final refreshToken = _queryParam(uri, 'refresh_token') ?? '';
+
+      if (refreshToken.isNotEmpty && email.isNotEmpty) {
+        final account = YoutubeAccount(
+          email: email,
+          channelId: channelId,
+          channelTitle: channelTitle,
+          avatarUrl: avatarUrl,
+          refreshToken: refreshToken,
+        );
+        ref.read(accountsProvider.notifier).upsertFromCallback(account);
+        setState(() {
+          _pendingEmail = email;
+          _pendingName = channelTitle.isNotEmpty ? channelTitle : email;
+        });
+      }
+    } else if (lower.startsWith('mymusic://youtube-connected')) {
       final email = _queryParam(uri, 'email');
       if (email != null && email.isNotEmpty) {
         setState(() => _pendingEmail = email);
@@ -111,7 +138,10 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
 
   void _dismissPending() {
     if (_pendingEmail != null) {
-      setState(() => _pendingEmail = null);
+      setState(() {
+        _pendingEmail = null;
+        _pendingName = null;
+      });
     }
   }
 
@@ -147,7 +177,7 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
               final l10n = ProviderScope.containerOf(innerContext).read(l10nProvider);
               messenger.showSnackBar(
                 SnackBar(
-                  content: Text(l10n.accountLinked(_pendingEmail!)),
+                  content: Text(l10n.accountLinked(_pendingName ?? _pendingEmail!)),
                   duration: const Duration(seconds: 3),
                 ),
               );
