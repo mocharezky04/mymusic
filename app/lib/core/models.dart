@@ -96,7 +96,8 @@ class YoutubeAccount {
     required this.email,
     required this.channelId,
     required this.channelTitle,
-    required this.avatarUrl,
+    this.avatarUrl = '',
+    this.refreshToken = '',
   });
 
   factory YoutubeAccount.fromJson(Map<String, dynamic> json) => YoutubeAccount(
@@ -104,14 +105,24 @@ class YoutubeAccount {
         channelId: json['channel_id'] as String? ?? '',
         channelTitle: json['channel_title'] as String? ?? '',
         avatarUrl: json['avatar_url'] as String? ?? '',
+        refreshToken: json['refresh_token'] as String? ?? '',
       );
 
   final String email;
   final String channelId;
   final String channelTitle;
   final String avatarUrl;
+  final String refreshToken;
 
   String get displayName => channelTitle.isNotEmpty ? channelTitle : email;
+
+  Map<String, dynamic> toJson() => {
+        'email': email,
+        'channel_id': channelId,
+        'channel_title': channelTitle,
+        'avatar_url': avatarUrl,
+        'refresh_token': refreshToken,
+      };
 }
 
 class YoutubePlaylist {

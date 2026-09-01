@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config.dart';
 import 'models.dart';
@@ -54,6 +57,12 @@ class MyMusicApi {
   }
 
   Future<List<YoutubeAccount>> youtubeAccounts() async {
+    if (ApiConfig.isServerless) {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('youtube_accounts') ?? '[]';
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => YoutubeAccount.fromJson(e as Map<String, dynamic>)).toList();
+    }
     final res = await _guard(() => _dio.get('/youtube/me'));
     final data = res.data as Map<String, dynamic>;
     return (data['accounts'] as List<dynamic>? ?? const [])
@@ -61,8 +70,17 @@ class MyMusicApi {
         .toList();
   }
 
-  Future<List<YoutubePlaylist>> youtubePlaylists(String account) async {
-    final res = await _guard(() => _dio.get('/youtube/playlists', queryParameters: {'account': account}));
+  Future<List<YoutubePlaylist>> youtubePlaylists(String account, {String? refreshToken}) async {
+    final params = <String, dynamic>{'account': account};
+    final headers = <String, dynamic>{};
+    if (ApiConfig.isServerless && refreshToken != null) {
+      headers['X-Refresh-Token'] = refreshToken;
+    }
+    final res = await _guard(() => _dio.get(
+      '/youtube/playlists',
+      queryParameters: params,
+      options: headers.isNotEmpty ? Options(headers: headers) : null,
+    ));
     final data = res.data as Map<String, dynamic>;
     return (data['playlists'] as List<dynamic>? ?? const [])
         .map((e) => YoutubePlaylist.fromJson(e as Map<String, dynamic>))
@@ -70,13 +88,20 @@ class MyMusicApi {
   }
 
   Future<List<Track>> youtubeTracks(String account, String playlistId,
-      {String? pageToken}) async {
+      {String? pageToken, String? refreshToken}) async {
     final params = <String, dynamic>{
       'account': account,
       'pageToken': ?pageToken,
     };
-    final res = await _guard(
-        () => _dio.get('/youtube/playlists/$playlistId/tracks', queryParameters: params));
+    final headers = <String, dynamic>{};
+    if (ApiConfig.isServerless && refreshToken != null) {
+      headers['X-Refresh-Token'] = refreshToken;
+    }
+    final res = await _guard(() => _dio.get(
+      '/youtube/playlists/$playlistId/tracks',
+      queryParameters: params,
+      options: headers.isNotEmpty ? Options(headers: headers) : null,
+    ));
     final data = res.data as Map<String, dynamic>;
     return (data['tracks'] as List<dynamic>? ?? const [])
         .map((e) => Track.fromJson(e as Map<String, dynamic>))
@@ -84,6 +109,15 @@ class MyMusicApi {
   }
 
   Future<void> youtubeDisconnect(String account) async {
+    if (ApiConfig.isServerless) {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('youtube_accounts') ?? '[]';
+      final list = (jsonDecode(raw) as List<dynamic>)
+          .where((e) => (e as Map<String, dynamic>)['email'] != account)
+          .toList();
+      await prefs.setString('youtube_accounts', jsonEncode(list));
+      return;
+    }
     await _guard(() => _dio.post('/youtube/disconnect', data: {'account': account}));
   }
 

@@ -10,5 +10,10 @@ abstract final class ApiConfig {
     return 'http://localhost:8000';
   }
 
+  static bool get isServerless {
+    if (_baseOverride.endsWith('.vercel.app')) return true;
+    return const bool.fromEnvironment('USE_SERVERLESS');
+  }
+
   static const apiKey = String.fromEnvironment('API_KEY');
 }
