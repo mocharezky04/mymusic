@@ -19,6 +19,14 @@ def _make_app(api_key: str | None = None) -> FastAPI:
     async def data():
         return {"data": "secret"}
 
+    @test_app.get("/youtube/auth/start")
+    async def auth_start():
+        return {"started": True}
+
+    @test_app.get("/youtube/callback")
+    async def callback():
+        return {"ok": True}
+
     return test_app
 
 
@@ -56,3 +64,17 @@ def test_key_configured_blocks_data_with_wrong_key():
     with TestClient(app) as client:
         resp = client.get("/data", headers={"X-API-Key": "wrong-key"})
         assert resp.status_code == 401
+
+
+def test_youtube_callback_exempt_from_api_key():
+    app = _make_app(api_key="secret-key")
+    with TestClient(app) as client:
+        resp = client.get("/youtube/callback")
+        assert resp.status_code != 401
+
+
+def test_youtube_auth_start_exempt_from_api_key():
+    app = _make_app(api_key="secret-key")
+    with TestClient(app) as client:
+        resp = client.get("/youtube/auth/start")
+        assert resp.status_code != 401
