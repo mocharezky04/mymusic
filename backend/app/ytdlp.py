@@ -3,7 +3,12 @@ import hashlib
 import logging
 import os
 import shutil
+import socket
+import sys
 import tempfile
+import threading
+import urllib.request
+import zipfile
 from pathlib import Path
 
 import yt_dlp
@@ -18,23 +23,81 @@ _COOKIE_FILENAME = "yt_cookies.txt"
 _FORCED_CLIENTS = {"youtube": {"player_client": ["tv", "android_vr", "tv_simply"]}}
 
 
-def _ensure_deno_on_path() -> None:
-    candidates = [
+_DENO_VERSION = "2.9.6"
+_DENO_URL = (
+    "https://github.com/denoland/deno/releases/download/"
+    f"v{_DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip"
+)
+
+_deno_lock = threading.Lock()
+_deno_ready = False
+
+
+def _deno_candidates() -> list[Path]:
+    return [
         Path(os.getcwd()) / "bin",
         Path(__file__).resolve().parent.parent / "bin",
+        Path(tempfile.gettempdir()) / "deno-bin",
     ]
-    for cand in candidates:
-        deno = cand / "deno"
-        if deno.is_file():
-            try:
-                deno.chmod(0o755)
-            except OSError:
-                pass
-            os.environ["PATH"] = str(cand) + os.pathsep + os.environ.get("PATH", "")
-            break
 
 
-_ensure_deno_on_path()
+def _install_deno_runtime() -> Path | None:
+    """Download deno into /tmp at runtime (Vercel does not bundle build-time
+    files into the Python lambda, so buildCommand-installed deno is lost)."""
+    dest = Path(tempfile.gettempdir()) / "deno-bin"
+    zip_path = dest / "deno.zip"
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+        logger.info("deno not found; downloading runtime copy to %s", dest)
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(120)
+        try:
+            urllib.request.urlretrieve(_DENO_URL, zip_path)
+        finally:
+            socket.setdefaulttimeout(old_timeout)
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(dest)
+        deno = dest / "deno"
+        deno.chmod(0o755)
+        zip_path.unlink(missing_ok=True)
+        logger.info("deno runtime installed at %s", deno)
+        return dest
+    except Exception:
+        logger.exception("runtime deno install failed")
+        return None
+
+
+def _ensure_deno_on_path() -> None:
+    global _deno_ready
+    if _deno_ready:
+        return
+    with _deno_lock:
+        if _deno_ready:
+            return
+        for cand in _deno_candidates():
+            deno = cand / "deno"
+            if deno.is_file():
+                try:
+                    deno.chmod(0o755)
+                except OSError:
+                    pass
+                os.environ["PATH"] = str(cand) + os.pathsep + os.environ.get("PATH", "")
+                _deno_ready = True
+                logger.info("deno found at %s", deno)
+                return
+        if shutil.which("deno"):
+            _deno_ready = True
+            logger.info("deno found on system PATH")
+            return
+        if sys.platform.startswith("linux"):
+            installed = _install_deno_runtime()
+            if installed is not None:
+                os.environ["PATH"] = (
+                    str(installed) + os.pathsep + os.environ.get("PATH", "")
+                )
+        else:
+            logger.info("skipping runtime deno install on %s", sys.platform)
+        _deno_ready = True
 
 
 class YtDlpError(Exception):
@@ -143,6 +206,7 @@ async def _extract_info(url: str, opts: dict) -> dict:
     merged = {**base, **opts}
 
     def _work():
+        _ensure_deno_on_path()
         with yt_dlp.YoutubeDL(merged) as ydl:
             info = ydl.extract_info(url, download=False)
             return ydl.sanitize_info(info)
