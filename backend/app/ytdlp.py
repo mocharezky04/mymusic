@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -15,6 +16,25 @@ logger = logging.getLogger(__name__)
 _COOKIE_FILENAME = "yt_cookies.txt"
 
 _FORCED_CLIENTS = {"youtube": {"player_client": ["tv", "android_vr", "tv_simply"]}}
+
+
+def _ensure_deno_on_path() -> None:
+    candidates = [
+        Path(os.getcwd()) / "bin",
+        Path(__file__).resolve().parent.parent / "bin",
+    ]
+    for cand in candidates:
+        deno = cand / "deno"
+        if deno.is_file():
+            try:
+                deno.chmod(0o755)
+            except OSError:
+                pass
+            os.environ["PATH"] = str(cand) + os.pathsep + os.environ.get("PATH", "")
+            break
+
+
+_ensure_deno_on_path()
 
 
 class YtDlpError(Exception):

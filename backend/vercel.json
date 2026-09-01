@@ -1,4 +1,5 @@
 {
+  "buildCommand": "pip install -r requirements.txt && bash scripts/install_deno.sh",
   "builds": [
     {
       "src": "api/index.py",
