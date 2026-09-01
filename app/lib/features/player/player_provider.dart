@@ -131,6 +131,7 @@ class PlayerController extends Notifier<PlayerState> {
   DateTime? _lastBroadcastAt;
   int _localPlaySeq = 0;
   int _lastRecordedIndex = -1;
+  bool _applying = false;
 
   @override
   PlayerState build() {
@@ -282,28 +283,32 @@ class PlayerController extends Notifier<PlayerState> {
 
   Future<bool> _applyQueue(List<Track> order, {required int startIndex, required bool autoPlay}) async {
     if (order.isEmpty) return false;
-    _handler!.stop();
-    _lastRecordedIndex = startIndex - 1;
-    state = state.copyWith(queue: order, index: startIndex, loading: true, error: null);
+    if (_applying) return false;
+    _applying = true;
     try {
-      final items = <(Track, String)>[];
+      final startTrack = order[startIndex];
+      String startUrl;
+      try {
+        startUrl = await _resolve(startTrack);
+      } catch (e) {
+        debugPrint('stream: failed to resolve start track: $e');
+        state = state.copyWith(error: 'Failed to load ${startTrack.title}');
+        return false;
+      }
+      _handler!.stop();
+      _lastRecordedIndex = startIndex - 1;
+      state = state.copyWith(queue: order, index: startIndex, loading: true, error: null);
+      final items = <(Track, String)>[(startTrack, startUrl)];
       for (var i = 0; i < order.length; i++) {
+        if (i == startIndex) continue;
         try {
           final url = await _resolve(order[i]);
           items.add((order[i], url));
         } catch (e) {
-          if (i == startIndex) rethrow;
           debugPrint('stream: skipping track ${order[i].title} (resolve failed: $e)');
         }
       }
-      if (items.isEmpty) throw Exception('No tracks resolved');
-      var adjustedStart = startIndex;
-      final ids = items.map((e) => e.$1.id).toList();
-      if (!ids.contains(order[startIndex].id)) {
-        adjustedStart = 0;
-      } else {
-        adjustedStart = ids.indexOf(order[startIndex].id);
-      }
+      var adjustedStart = 0;
       await _handler!.loadQueue(items, startIndex: adjustedStart, autoPlay: autoPlay);
       state = state.copyWith(
         queue: items.map((e) => e.$1).toList(),
@@ -321,6 +326,8 @@ class PlayerController extends Notifier<PlayerState> {
       _handler!.stop();
       state = state.copyWith(loading: false, playing: false, error: 'Failed to load playback queue');
       return false;
+    } finally {
+      _applying = false;
     }
   }
 
@@ -368,6 +375,7 @@ class PlayerController extends Notifier<PlayerState> {
         _persistQueue();
         return;
       } on Exception {
+        state = state.copyWith(error: 'Failed to add ${track.title}');
         return;
       }
     }
@@ -391,6 +399,7 @@ class PlayerController extends Notifier<PlayerState> {
         _persistQueue();
         return;
       } on Exception {
+        state = state.copyWith(error: 'Failed to add ${track.title}');
         return;
       }
     }
