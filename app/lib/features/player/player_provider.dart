@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models.dart';
@@ -276,18 +277,32 @@ class PlayerController extends Notifier<PlayerState> {
     _lastRecordedIndex = startIndex - 1;
     state = state.copyWith(queue: order, index: startIndex, loading: true);
     try {
-      final urls = await Future.wait(order.map(_resolve));
-      final items = [
-        for (var i = 0; i < order.length; i++) (order[i], urls[i]),
-      ];
-      await _handler!.loadQueue(items, startIndex: startIndex, autoPlay: autoPlay);
+      final items = <(Track, String)>[];
+      for (var i = 0; i < order.length; i++) {
+        try {
+          final url = await _resolve(order[i]);
+          items.add((order[i], url));
+        } catch (e) {
+          if (i == startIndex) rethrow;
+          debugPrint('stream: skipping track ${order[i].title} (resolve failed: $e)');
+        }
+      }
+      if (items.isEmpty) throw Exception('No tracks resolved');
+      var adjustedStart = startIndex;
+      final ids = items.map((e) => e.$1.id).toList();
+      if (!ids.contains(order[startIndex].id)) {
+        adjustedStart = 0;
+      } else {
+        adjustedStart = ids.indexOf(order[startIndex].id);
+      }
+      await _handler!.loadQueue(items, startIndex: adjustedStart, autoPlay: autoPlay);
       state = state.copyWith(
         queue: items.map((e) => e.$1).toList(),
-        index: startIndex,
+        index: adjustedStart,
         loading: false,
         position: Duration.zero,
-        duration: order[startIndex].durationSeconds > 0
-            ? Duration(seconds: order[startIndex].durationSeconds)
+        duration: items[adjustedStart].$1.durationSeconds > 0
+            ? Duration(seconds: items[adjustedStart].$1.durationSeconds)
             : Duration.zero,
         error: null,
       );

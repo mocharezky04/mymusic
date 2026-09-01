@@ -34,10 +34,22 @@ Future<String> resolveStreamUrl(String videoId, {String quality = '128k'}) async
 
     final yt = YoutubeExplode();
     try {
-      final manifest = await yt.videos.streamsClient.getManifest(videoId);
+      StreamManifest manifest;
+      try {
+        manifest = await yt.videos.streams.getManifest(
+          videoId,
+          ytClients: [YoutubeApiClient.androidVr],
+        );
+      } catch (_) {
+        debugPrint('stream: androidVr client failed, trying default');
+        manifest = await yt.videos.streams.getManifest(videoId);
+      }
       final audio = manifest.audioOnly.withHighestBitrate();
       debugPrint('stream: local fallback');
       return audio.url.toString();
+    } catch (e) {
+      debugPrint('stream: local fallback failed: $e');
+      rethrow;
     } finally {
       yt.close();
     }
