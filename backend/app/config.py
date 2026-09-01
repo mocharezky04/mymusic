@@ -5,6 +5,7 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +34,16 @@ class Settings(BaseSettings):
     youtube_callback_uri: str = "http://127.0.0.1:8000/youtube/callback"
 
     api_key: str | None = None
+
+    @field_validator(
+        "youtube_callback_uri",
+        "google_client_id",
+        "google_client_secret",
+        mode="before",
+    )
+    @classmethod
+    def _strip_whitespace(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
     @property
     def cors_origin_list(self) -> list[str]:
