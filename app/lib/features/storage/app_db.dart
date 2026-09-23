@@ -70,6 +70,28 @@ class DownloadsRows extends Table {
   DateTimeColumn get createdAt => dateTime()();
 }
 
+class PlaylistRows extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+class PlaylistTrackRows extends Table {
+  IntColumn get playlistId => integer().references(PlaylistRows, #id)();
+  IntColumn get position => integer()();
+  TextColumn get trackId => text()();
+  TextColumn get source => text()();
+  TextColumn get title => text()();
+  TextColumn get artist => text().withDefault(const Constant(''))();
+  IntColumn get duration => integer().withDefault(const Constant(0))();
+  TextColumn get thumb => text().withDefault(const Constant(''))();
+  TextColumn get uploader => text().withDefault(const Constant(''))();
+  TextColumn get url => text().withDefault(const Constant(''))();
+
+  @override
+  Set<Column> get primaryKey => {playlistId, trackId, source};
+}
+
 class PlaybackHistoryRows extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get trackId => text()();
@@ -104,13 +126,22 @@ class DownloadRecord {
 }
 
 @DriftDatabase(
-  tables: [SearchHistoryRows, QueueRows, MetaRows, DownloadsRows, PlaybackHistoryRows, SavedMixRows],
+  tables: [
+    SearchHistoryRows,
+    QueueRows,
+    MetaRows,
+    DownloadsRows,
+    PlaybackHistoryRows,
+    SavedMixRows,
+    PlaylistRows,
+    PlaylistTrackRows,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openExecutor());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -123,6 +154,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.createTable(savedMixRows);
+          }
+          if (from < 5) {
+            await m.createTable(playlistRows);
+            await m.createTable(playlistTrackRows);
           }
         },
       );
@@ -336,6 +371,137 @@ class AppDatabase extends _$AppDatabase {
           ..where((t) => t.mixId.equals(mixId)))
         .get();
     return rows.isNotEmpty;
+  }
+
+  Future<List<PlaylistRow>> playlists() async {
+    return (select(playlistRows)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .get();
+  }
+
+  Future<PlaylistRow?> playlistById(int id) async {
+    final rows = await (select(playlistRows)..where((t) => t.id.equals(id))).get();
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<int> createPlaylist(String name) async {
+    return into(playlistRows).insert(
+      PlaylistRowsCompanion.insert(name: name.trim(), createdAt: DateTime.now()),
+    );
+  }
+
+  Future<void> renamePlaylist(int id, String name) async {
+    await (update(playlistRows)..where((t) => t.id.equals(id)))
+        .write(PlaylistRowsCompanion(name: Value(name.trim())));
+  }
+
+  Future<void> deletePlaylist(int id) async {
+    await transaction(() async {
+      await (delete(playlistTrackRows)..where((t) => t.playlistId.equals(id))).go();
+      await (delete(playlistRows)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
+  Future<List<Track>> playlistTracks(int playlistId) async {
+    final rows = await (select(playlistTrackRows)
+          ..where((t) => t.playlistId.equals(playlistId))
+          ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+        .get();
+    return rows.map((r) => Track(
+          id: r.trackId,
+          source: TrackSource.fromApi(r.source),
+          title: r.title,
+          artist: r.artist,
+          durationSeconds: r.duration,
+          thumb: r.thumb,
+          uploader: r.uploader,
+          url: r.url,
+        ))
+        .toList();
+  }
+
+  Future<bool> isInPlaylist(int playlistId, String trackId, String source) async {
+    final rows = await (select(playlistTrackRows)
+          ..where((t) =>
+              t.playlistId.equals(playlistId) &
+              t.trackId.equals(trackId) &
+              t.source.equals(source)))
+        .get();
+    return rows.isNotEmpty;
+  }
+
+  Future<void> addTrackToPlaylist(int playlistId, Track track) async {
+    final exists = await isInPlaylist(playlistId, track.id, track.source.apiValue);
+    if (exists) return;
+    final count = await (select(playlistTrackRows)
+          ..where((t) => t.playlistId.equals(playlistId)))
+        .get();
+    final position = count.length;
+    await into(playlistTrackRows).insert(
+      PlaylistTrackRowsCompanion.insert(
+        playlistId: playlistId,
+        position: position,
+        trackId: track.id,
+        source: track.source.apiValue,
+        title: track.title,
+        artist: Value(track.artist),
+        duration: Value(track.durationSeconds),
+        thumb: Value(track.thumb),
+        uploader: Value(track.uploader),
+        url: Value(track.url),
+      ),
+    );
+  }
+
+  Future<void> removeTrackFromPlaylist(int playlistId, String trackId, String source) async {
+    await transaction(() async {
+      final rows = await (select(playlistTrackRows)
+            ..where((t) =>
+                t.playlistId.equals(playlistId) &
+                t.trackId.equals(trackId) &
+                t.source.equals(source)))
+          .get();
+      if (rows.isEmpty) return;
+      await (delete(playlistTrackRows)
+            ..where((t) =>
+                t.playlistId.equals(playlistId) &
+                t.trackId.equals(trackId) &
+                t.source.equals(source)))
+          .go();
+      final remaining = await (select(playlistTrackRows)
+            ..where((t) => t.playlistId.equals(playlistId))
+            ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+          .get();
+      for (var i = 0; i < remaining.length; i++) {
+        await (update(playlistTrackRows)
+              ..where((t) => t.playlistId.equals(remaining[i].playlistId) &
+                  t.trackId.equals(remaining[i].trackId) &
+                  t.source.equals(remaining[i].source)))
+            .write(PlaylistTrackRowsCompanion(position: Value(i)));
+      }
+    });
+  }
+
+  Future<void> reorderPlaylistTracks(int playlistId, int oldIndex, int newIndex) async {
+    await transaction(() async {
+      final rows = await (select(playlistTrackRows)
+            ..where((t) => t.playlistId.equals(playlistId))
+            ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+          .get();
+      if (rows.isEmpty) return;
+      if (oldIndex < 0 || oldIndex >= rows.length) return;
+      if (newIndex < 0 || newIndex >= rows.length) return;
+      final reordered = List.of(rows);
+      final moved = reordered.removeAt(oldIndex);
+      reordered.insert(newIndex, moved);
+      for (var i = 0; i < reordered.length; i++) {
+        await (update(playlistTrackRows)
+              ..where((t) => t.playlistId.equals(reordered[i].playlistId) &
+                  t.trackId.equals(reordered[i].trackId) &
+                  t.source.equals(reordered[i].source)))
+            .write(PlaylistTrackRowsCompanion(position: Value(i)));
+      }
+    });
   }
 }
 

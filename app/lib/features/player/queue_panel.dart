@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n.dart';
 import '../../core/theme.dart';
+import '../playlist/add_to_playlist_sheet.dart';
 import '../player/player_provider.dart';
 import '../search/track_tile.dart';
 
@@ -200,7 +201,11 @@ class _DismissibleQueueItem extends StatelessWidget {
       ),
       child: Container(
         color: scheme.surface,
-        child: TrackTile(track: track, onTap: onTap),
+        child: TrackTile(
+          track: track,
+          onTap: onTap,
+          trailing: AddToPlaylistIconButton(track: track),
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../../core/l10n.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../lyrics/lyrics_sheet.dart';
+import '../playlist/add_to_playlist_sheet.dart';
 import '../search/eq_bars.dart';
 import '../search/track_tile.dart';
 import '../storage/download_service.dart';
@@ -62,6 +63,12 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             _DownloadButton(track: track, l10n: l10n),
             const SizedBox(width: 4),
           ],
+          if (track != null)
+            IconButton(
+              icon: const Icon(Icons.playlist_add_rounded, size: 23),
+              tooltip: l10n.addToPlaylist,
+              onPressed: () => pickPlaylistForTrack(context, track),
+            ),
           IconButton(
             icon: const Icon(Icons.lyrics_outlined, size: 23),
             tooltip: l10n.lyrics,

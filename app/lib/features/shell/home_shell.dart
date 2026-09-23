@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../forYou/for_you_screen.dart';
 import '../forYou/recommendation_provider.dart';
+import '../playlist/playlist_screen.dart';
 import '../player/mini_player.dart';
-import '../search/queue_screen.dart';
 import '../search/search_screen.dart';
 import '../../core/l10n.dart';
 
 enum AppTab {
   forYou(Icons.auto_awesome_rounded),
   search(Icons.search_rounded),
-  queue(Icons.queue_music_rounded);
+  playlist(Icons.playlist_play_rounded);
 
   const AppTab(this.icon);
 
@@ -20,7 +20,7 @@ enum AppTab {
   String label(L10n l10n) => switch (this) {
         AppTab.forYou => l10n.forYou,
         AppTab.search => l10n.search,
-        AppTab.queue => l10n.queue,
+        AppTab.playlist => l10n.playlist,
       };
   String title(L10n l10n) => label(l10n);
 }
@@ -142,7 +142,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget _body(AppTab tab) {
     return IndexedStack(
       index: _index,
-      children: const [ForYouScreen(), SearchScreen(), QueueScreen()],
+      children: const [ForYouScreen(), SearchScreen(), PlaylistScreen()],
     );
   }
 }

@@ -14,7 +14,7 @@ class L10n {
   String get forYou => _t('For You', 'Untukmu');
   String get recentlyPlayed => _t('Recently played', 'Baca cepat');
   String get search => _t('Search', 'Cari');
-  String get queue => _t('Queue', 'Antrian');
+  String get playlist => _t('Playlist', 'Playlist');
   String get changeTheme => _t('Change theme', 'Ganti tema');
   String get changeLanguage => _t('Language', 'Ganti bahasa');
 
@@ -34,6 +34,8 @@ class L10n {
   String get playNext => _t('Play next', 'Putar berikutnya');
   String get addToQueue => _t('Add to queue', 'Tambahkan ke antrian');
   String get addToQueueShort => _t('Add to queue', 'Tambah ke antrian');
+  String get addToPlaylist => _t('Add to playlist', 'Tambah ke playlist');
+  String get removeFromPlaylist => _t('Remove from playlist', 'Hapus dari playlist');
 
   // Queue
   String get queueEmptyTitle => _t('Queue is empty', 'Antrian kosong');
@@ -122,6 +124,36 @@ class L10n {
   String get playbackError => _t('A playback error occurred', 'Terjadi kesalahan pemutaran');
   String get failedToLoadQueue => _t('Failed to load playback queue', 'Gagal memuat antrian audio');
   String get sourceNotPlayableYet => _t('This source cannot be played yet', 'Sumber ini belum bisa diputar');
+
+  // Local playlists (offline)
+  String get emptyPlaylistsTitle => _t('No playlists yet', 'Belum ada playlist');
+  String get emptyPlaylistsSubtitle => _t('Build your own playlists that live on this device.', 'Buat playlist sendiri yang tersimpan di perangkat ini.');
+  String get newPlaylist => _t('New playlist', 'Playlist baru');
+  String get playlistName => _t('Playlist name', 'Nama playlist');
+  String get playlistNameHint => _t('e.g. Road trip', 'mis. Perjalanan');
+  String get playlistEmptyName => _t('Give the playlist a name', 'Beri nama playlist dulu');
+  String get createPlaylistTitle => _t('Create playlist', 'Buat playlist');
+  String get create => _t('Create', 'Buat');
+  String get rename => _t('Rename', 'Ganti nama');
+  String get save => _t('Save', 'Simpan');
+  String get renamePlaylistTitle => _t('Rename playlist', 'Ganti nama playlist');
+  String get deletePlaylistTitle => _t('Delete playlist?', 'Hapus playlist?');
+  String deletePlaylistConfirm(String name) => _t('"$name" and its songs will be deleted from this device.', '"$name" beserta lagunya akan dihapus dari perangkat ini.');
+  String get playlistDeleted => _t('Playlist deleted', 'Playlist dihapus');
+  String get playlistRenamed => _t('Playlist renamed', 'Nama playlist diganti');
+  String get playlistCreated => _t('Playlist created', 'Playlist dibuat');
+  String get loadPlaylistsFailed => _t('Could not load playlists', 'Gagal memuat playlist');
+  String get playAllLabel => _t('Play', 'Putar');
+  String get shuffleLabel => _t('Shuffle', 'Acak');
+  String get shufflePlay => _t('Shuffle play', 'Putar acak');
+  String get noSongsTitle => _t('This playlist is empty', 'Playlist ini kosong');
+  String get noSongsSubtitle => _t('Open any song menu and choose "Add to playlist".', 'Buka menu lagu mana pun lalu pilih "Tambah ke playlist".');
+  String get removedFromPlaylist => _t('Removed from playlist', 'Dihapus dari playlist');
+  String get pickPlaylistTitle => _t('Add to playlist', 'Tambah ke playlist');
+  String get pickPlaylistEmpty => _t('Create a playlist first, then add songs to it.', 'Buat playlist dulu, lalu masukkan lagu ke dalamnya.');
+  String addedToPlaylist(String name) => _t('Added to "$name"', 'Ditambahkan ke "$name"');
+  String get alreadyInPlaylists => _t('Already added', 'Sudah ada');
+  String get reorderHint => _t('Hold and drag to reorder', 'Tahan lalu geser untuk menyusun ulang');
 }
 
 final l10nProvider = Provider<L10n>((ref) => L10n(ref.watch(languageProvider)));

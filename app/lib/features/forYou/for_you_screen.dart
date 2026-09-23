@@ -6,6 +6,7 @@ import '../../core/api.dart';
 import '../../core/l10n.dart';
 import '../../core/models.dart';
 import '../player/player_provider.dart';
+import '../playlist/add_to_playlist_sheet.dart';
 import '../search/search_providers.dart' show apiProvider;
 import '../search/track_tile.dart';
 import '../storage/app_db.dart';
@@ -762,10 +763,58 @@ class _RecommendedSection extends ConsumerWidget {
               TrackTile(
                 track: t,
                 onTap: () => controller.playFrom([t], 0),
+                trailing: _RecommendMenu(track: t),
               ),
           ],
         );
       },
+    );
+  }
+}
+
+class _RecommendMenu extends ConsumerWidget {
+  const _RecommendMenu({required this.track});
+
+  final Track track;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(l10nProvider);
+    final scheme = Theme.of(context).colorScheme;
+    final controller = ref.read(playerControllerProvider.notifier);
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded, size: 20, color: scheme.onSurfaceVariant),
+      tooltip: l10n.moreActions,
+      onSelected: (action) async {
+        switch (action) {
+          case 'playNext':
+            controller.playNext(track);
+          case 'enqueue':
+            controller.addToQueue(track);
+          case 'playlist':
+            await pickPlaylistForTrack(context, track);
+        }
+      },
+      itemBuilder: (_) => [
+        _menuItem(scheme, 'playNext', Icons.playlist_add_rounded, l10n.playNext),
+        _menuItem(scheme, 'enqueue', Icons.queue_music_rounded, l10n.addToQueue),
+        _menuItem(scheme, 'playlist', Icons.playlist_add_rounded, l10n.addToPlaylist),
+      ],
+    );
+  }
+
+  static PopupMenuItem<String> _menuItem(
+      ColorScheme scheme, String value, IconData icon, String label) {
+    return PopupMenuItem(
+      value: value,
+      height: 44,
+      child: Row(
+        children: [
+          Icon(icon, size: 19, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Text(label, style: const TextStyle(fontSize: 14)),
+        ],
+      ),
     );
   }
 }

@@ -8,6 +8,7 @@ app/android/.gradle/
 app/android/local.properties
 app/android/key.properties
 app/android/app/release.jks
+app/android/build/
 app/ios/
 app/linux/
 app/macos/
@@ -26,6 +27,7 @@ backend/uvicorn_err.log
 backend/.pytest_cache/
 __pycache__/
 *.py[cod]
+backend/cookies.txt
 
 # Web
 backend/web/

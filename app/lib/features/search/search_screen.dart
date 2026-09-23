@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/l10n.dart';
 import '../../core/widgets/state_shell.dart';
 import '../player/player_provider.dart';
+import '../playlist/add_to_playlist_sheet.dart';
 import '../../core/models.dart';
 import 'search_providers.dart';
 import 'track_tile.dart';
@@ -241,7 +242,7 @@ class _ResultsHeader extends StatelessWidget {
   }
 }
 
-enum _TrackAction { playNow, playNext, enqueue }
+enum _TrackAction { playNow, playNext, enqueue, playlist }
 
 class _ResultMenu extends StatelessWidget {
   const _ResultMenu({required this.l10n, required this.track, required this.controller});
@@ -260,7 +261,7 @@ class _ResultMenu extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       tooltip: l10n.moreActions,
-      onSelected: (action) {
+      onSelected: (action) async {
         switch (action) {
           case _TrackAction.playNow:
             controller.playFrom([track], 0);
@@ -268,6 +269,8 @@ class _ResultMenu extends StatelessWidget {
             controller.playNext(track);
           case _TrackAction.enqueue:
             controller.addToQueue(track);
+          case _TrackAction.playlist:
+            await pickPlaylistForTrack(context, track);
         }
       },
       itemBuilder: (_) => [
@@ -287,6 +290,11 @@ class _ResultMenu extends StatelessWidget {
           value: _TrackAction.enqueue,
           height: 44,
           child: _MenuRow(Icons.queue_music_rounded, l10n.addToQueue),
+        ),
+        PopupMenuItem(
+          value: _TrackAction.playlist,
+          height: 44,
+          child: _MenuRow(Icons.playlist_add_rounded, l10n.addToPlaylist),
         ),
       ],
     );
