@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../../core/config.dart';
+import 'app_ejs_solver.dart';
 
 Dio _backendDio() {
   final dio = Dio(BaseOptions(
@@ -29,6 +30,12 @@ Future<String> _fromBackend(String videoId, {String quality = '128k'}) async {
   return url;
 }
 
+YoutubeExplode? _sharedExplode;
+
+YoutubeExplode _sharedYt() {
+  return _sharedExplode ??= YoutubeExplode(jsSolver: appEjsSolver);
+}
+
 Future<String> _fromLocal(String videoId) async {
   final clients = [
     ('tv', YoutubeApiClient.tv),
@@ -37,21 +44,17 @@ Future<String> _fromLocal(String videoId) async {
     ('safari', YoutubeApiClient.safari),
     ('mweb', YoutubeApiClient.mweb),
   ];
-  final yt = YoutubeExplode();
-  try {
-    String? result = await _tryClients(yt, videoId, clients);
-    if (result != null) return result;
-    debugPrint('stream: all clients failed, retrying once with tv+ios');
-    await Future<void>.delayed(const Duration(seconds: 3));
-    result = await _tryClients(yt, videoId, [
-      ('tv', YoutubeApiClient.tv),
-      ('ios', YoutubeApiClient.ios),
-    ]);
-    if (result != null) return result;
-    throw Exception('all local clients failed');
-  } finally {
-    yt.close();
-  }
+  final yt = _sharedYt();
+  String? result = await _tryClients(yt, videoId, clients);
+  if (result != null) return result;
+  debugPrint('stream: all clients failed, retrying once with tv+ios');
+  await Future<void>.delayed(const Duration(seconds: 3));
+  result = await _tryClients(yt, videoId, [
+    ('tv', YoutubeApiClient.tv),
+    ('ios', YoutubeApiClient.ios),
+  ]);
+  if (result != null) return result;
+  throw Exception('all local clients failed');
 }
 
 Future<String?> _tryClients(
