@@ -170,6 +170,7 @@ def _stream_variants() -> list[dict]:
     cookie_path = _cookiefile_path()
     has_cookies = cookie_path is not None
     variants: list[dict] = []
+    variants.append({"label": "default-no-cookie"})
     if has_cookies:
         variants.append({
             "label": "forced-clients+cookies",

@@ -30,6 +30,7 @@ def test_variants_with_cookies(monkeypatch):
     monkeypatch.setattr("app.ytdlp.get_settings", lambda: Settings())
     vs = _stream_variants()
     labels = [v["label"] for v in vs]
+    assert labels[0] == "default-no-cookie"
     assert "forced-clients+cookies" in labels
     assert "default-clients+cookies" in labels
     assert "forced-clients-no-cookie" in labels
@@ -40,6 +41,7 @@ def test_variants_without_cookies(monkeypatch):
     monkeypatch.setattr("app.ytdlp.get_settings", lambda: Settings())
     vs = _stream_variants()
     labels = [v["label"] for v in vs]
+    assert labels[0] == "default-no-cookie"
     assert "forced-clients" in labels
     assert "default-clients" in labels
 
@@ -50,3 +52,13 @@ def test_variants_default_clients_has_no_extractor_args(monkeypatch):
     vs = _stream_variants()
     default = [v for v in vs if v["label"] == "default-clients"][0]
     assert "extractor_args" not in default
+
+
+def test_variants_default_no_cookie_is_plos(monkeypatch):
+    monkeypatch.delenv("YOUTUBE_COOKIES", raising=False)
+    monkeypatch.setattr("app.ytdlp.get_settings", lambda: Settings())
+    vs = _stream_variants()
+    plos = vs[0]
+    assert plos["label"] == "default-no-cookie"
+    assert "extractor_args" not in plos
+    assert "cookiefile" not in plos
