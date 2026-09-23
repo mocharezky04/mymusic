@@ -4,6 +4,7 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../../core/config.dart';
 import 'app_ejs_solver.dart';
+import 'yt/visionos_client.dart';
 
 Dio _backendDio() {
   final dio = Dio(BaseOptions(
@@ -38,20 +39,16 @@ YoutubeExplode _sharedYt() {
 
 Future<String> _fromLocal(String videoId) async {
   final clients = [
-    ('tv', YoutubeApiClient.tv),
-    ('androidVr', YoutubeApiClient.androidVr),
+    ('visionos', visionosClient),
     ('ios', YoutubeApiClient.ios),
-    ('safari', YoutubeApiClient.safari),
-    ('mweb', YoutubeApiClient.mweb),
   ];
   final yt = _sharedYt();
   String? result = await _tryClients(yt, videoId, clients);
   if (result != null) return result;
-  debugPrint('stream: all clients failed, retrying once with tv+ios');
+  debugPrint('stream: all clients failed, retrying visionos once');
   await Future<void>.delayed(const Duration(seconds: 3));
   result = await _tryClients(yt, videoId, [
-    ('tv', YoutubeApiClient.tv),
-    ('ios', YoutubeApiClient.ios),
+    ('visionos', visionosClient),
   ]);
   if (result != null) return result;
   throw Exception('all local clients failed');
