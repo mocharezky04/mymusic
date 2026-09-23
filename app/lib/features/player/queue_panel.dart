@@ -25,19 +25,20 @@ class QueuePanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queue = ref.watch(playerControllerProvider.select((s) => s.queue));
     final currentIndex = ref.watch(playerControllerProvider.select((s) => s.index));
+    final playing = ref.watch(playerControllerProvider.select((s) => s.playing));
     final controller = ref.read(playerControllerProvider.notifier);
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
     final mediaQuery = MediaQuery.of(context);
 
-    final upcoming = currentIndex + 1 < queue.length
-        ? queue.sublist(currentIndex + 1)
-        : <dynamic>[];
+    final current = (currentIndex >= 0 && currentIndex < queue.length) ? queue[currentIndex] : null;
+    final upcomingStart = current == null ? 0 : currentIndex + 1;
+    final upcoming = upcomingStart < queue.length ? queue.sublist(upcomingStart) : <dynamic>[];
 
     return Padding(
       padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
       child: Container(
-        constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.7),
+        constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.75),
         decoration: BoxDecoration(
           color: scheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -64,34 +65,27 @@ class QueuePanel extends ConsumerWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 12, 4),
+                padding: const EdgeInsets.fromLTRB(20, 14, 8, 4),
                 child: Row(
                   children: [
-                    Text(
-                      l10n.upNext,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
+                    Icon(Icons.queue_music_rounded, size: 18, color: scheme.primary),
                     const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: scheme.primary.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
+                    Expanded(
                       child: Text(
-                        '${upcoming.length}',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.primary,
+                        l10n.queue,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    if (queue.isNotEmpty)
+                      IconButton(
+                        onPressed: () => _confirmClear(context, ref),
+                        icon: const Icon(Icons.delete_sweep_outlined, size: 20),
+                        tooltip: l10n.clearQueue,
+                      ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.expand_more_rounded, size: 22),
@@ -100,42 +94,170 @@ class QueuePanel extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (upcoming.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Text(
-                    l10n.queueEmptySubtitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: scheme.onSurfaceVariant,
+              if (queue.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.queue_music_rounded, size: 40, color: scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.queueEmptyTitle,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            l10n.queueEmptySubtitle,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 )
               else
-                Flexible(
-                  child: ListView.builder(
+                Expanded(
+                  child: ListView(
                     padding: const EdgeInsets.only(bottom: 12),
-                    shrinkWrap: true,
-                    itemCount: upcoming.length,
-                    itemBuilder: (context, i) {
-                      final t = upcoming[i];
-                      final sourceIndex = currentIndex + 1 + i;
-                      return _DismissibleQueueItem(
-                        key: ValueKey('qp-${t.id}-$sourceIndex'),
-                        track: t,
-                        onTap: () {
-                          controller.playFrom(queue, sourceIndex);
-                          Navigator.of(context).pop();
-                        },
-                        onRemove: () => _removeAndUndo(context, ref, sourceIndex, t.title),
-                      );
-                    },
+                    children: [
+                      if (current != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
+                          child: Text(
+                            l10n.nowPlaying.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        TrackTile(
+                          track: current,
+                          isCurrent: true,
+                          isPlaying: playing,
+                          onTap: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(20, current == null ? 8 : 14, 20, 6),
+                        child: Row(
+                          children: [
+                            Text(
+                              l10n.upNextShort.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                '${upcoming.length}',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.reorderHint,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (upcoming.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          child: Text(
+                            l10n.queueEmptySubtitle,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      else
+                        ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          buildDefaultDragHandles: false,
+                          itemCount: upcoming.length,
+                          onReorderItem: (oldIndex, newIndex) {
+                            final qOld = upcomingStart + oldIndex;
+                            final qNew = upcomingStart + newIndex;
+                            if (qOld != qNew) controller.reorder(qOld, qNew);
+                          },
+                          itemBuilder: (context, i) {
+                            final t = upcoming[i];
+                            final sourceIndex = upcomingStart + i;
+                            return ReorderableDelayedDragStartListener(
+                              key: ValueKey('qp-${t.id}-$sourceIndex'),
+                              index: i,
+                              child: _DismissibleQueueItem(
+                                track: t,
+                                onTap: () {
+                                  controller.playFrom(queue, sourceIndex);
+                                  Navigator.of(context).pop();
+                                },
+                                onRemove: () => _removeAndUndo(context, ref, sourceIndex, t.title),
+                              ),
+                            );
+                          },
+                        ),
+                    ],
                   ),
                 ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmClear(BuildContext context, WidgetRef ref) {
+    final l10n = ref.read(l10nProvider);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.clearQueueTitle),
+        content: Text(l10n.clearQueueConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(playerControllerProvider.notifier).clearQueue();
+            },
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            child: Text(l10n.clearQueue),
+          ),
+        ],
       ),
     );
   }
@@ -146,6 +268,8 @@ class QueuePanel extends ConsumerWidget {
     final currentState = ref.read(playerControllerProvider);
     final queue = List.of(currentState.queue);
     if (index < 0 || index >= queue.length) return;
+    final removed = queue[index];
+    final shift = index <= currentState.index;
     controller.removeAt(index);
     final l10n = ref.read(l10nProvider);
     messenger.clearSnackBars();
@@ -156,10 +280,9 @@ class QueuePanel extends ConsumerWidget {
         action: SnackBarAction(
           label: l10n.undo,
           onPressed: () {
-            controller.reorder(index, queue.length - 1);
-            if (index <= currentState.index) {
-              controller.playFrom(ref.read(playerControllerProvider).queue, index);
-            }
+            final latest = ref.read(playerControllerProvider);
+            final target = (index <= latest.queue.length) ? index : latest.queue.length;
+            controller.addAt(removed, target, shiftCurrent: shift);
             messenger.hideCurrentSnackBar();
           },
         ),
@@ -168,9 +291,8 @@ class QueuePanel extends ConsumerWidget {
   }
 }
 
-class _DismissibleQueueItem extends StatelessWidget {
+class _DismissibleQueueItem extends ConsumerWidget {
   const _DismissibleQueueItem({
-    super.key,
     required this.track,
     required this.onTap,
     required this.onRemove,
@@ -181,8 +303,9 @@ class _DismissibleQueueItem extends StatelessWidget {
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = ref.watch(l10nProvider);
     return Dismissible(
       key: ValueKey('d-${track.id}'),
       direction: DismissDirection.horizontal,
@@ -204,7 +327,21 @@ class _DismissibleQueueItem extends StatelessWidget {
         child: TrackTile(
           track: track,
           onTap: onTap,
-          trailing: AddToPlaylistIconButton(track: track),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                tooltip: l10n.removeFromQueueShort,
+              ),
+              AddToPlaylistIconButton(track: track),
+              const Padding(
+                padding: EdgeInsets.only(left: 4, right: 6),
+                child: Icon(Icons.drag_indicator, size: 18),
+              ),
+            ],
+          ),
         ),
       ),
     );

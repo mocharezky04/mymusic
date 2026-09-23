@@ -420,6 +420,33 @@ class PlayerController extends Notifier<PlayerState> {
     _persistQueue();
   }
 
+  Future<void> addAt(Track track, int index, {required bool shiftCurrent}) async {
+    if (!track.source.playable) return;
+    final queue = List<Track>.from(state.queue);
+    final insertAt = index.clamp(0, queue.length);
+    final oldCurrent = state.index;
+    queue.insert(insertAt, track);
+    var current = oldCurrent;
+    if (shiftCurrent && oldCurrent >= insertAt) current = oldCurrent + 1;
+    if (_handler!.isQueueLoaded) {
+      try {
+        final url = await _resolve(track);
+        await _handler!.addLast(track, url);
+        final last = queue.length - 1;
+        if (insertAt < last) await _handler!.move(last, insertAt);
+        state = state.copyWith(queue: queue, index: current);
+        _persistQueue();
+        return;
+      } on Exception {
+        state = state.copyWith(queue: queue, index: current, error: 'Failed to restore ${track.title}');
+        _persistQueue();
+        return;
+      }
+    }
+    state = state.copyWith(queue: queue, index: current);
+    _persistQueue();
+  }
+
   void toggle() {
     if (!state.hasTrack) return;
     if (state.playing) {

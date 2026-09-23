@@ -12,6 +12,7 @@ import '../search/track_tile.dart';
 import '../storage/download_service.dart';
 import '../audio/stream_resolver.dart';
 import 'player_provider.dart';
+import 'queue_panel.dart';
 
 String _fmt(Duration d) {
   final m = d.inMinutes;
@@ -40,6 +41,9 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     final hasTrack = ref.watch(playerControllerProvider.select((s) => s.hasTrack));
     final repeat = ref.watch(playerControllerProvider.select((s) => s.repeat));
     final shuffle = ref.watch(playerControllerProvider.select((s) => s.shuffle));
+    final hasNext = ref.watch(
+      playerControllerProvider.select((s) => s.index + 1 < s.queue.length),
+    );
     final position = ref.watch(playerPositionProvider).value;
     final pos = position?.position ?? Duration.zero;
     final dur = position?.duration ??
@@ -242,6 +246,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
                           ],
                         ),
                         const SizedBox(height: 20),
+                        if (hasNext) _UpNextButton(scheme: scheme, l10n: l10n),
                       ],
                     ),
                   ),
@@ -262,6 +267,56 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     if (duration.inMilliseconds <= 0) return 0;
     final ms = position.inMilliseconds.clamp(0, duration.inMilliseconds);
     return ms.toDouble();
+  }
+}
+
+class _UpNextButton extends ConsumerWidget {
+  const _UpNextButton({required this.scheme, required this.l10n});
+
+  final ColorScheme scheme;
+  final L10n l10n;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final queue = ref.watch(playerControllerProvider.select((s) => s.queue));
+    final index = ref.watch(playerControllerProvider.select((s) => s.index));
+    final next = index + 1 < queue.length ? queue[index + 1] : null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+      child: Material(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => QueuePanel.show(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.queue_music_rounded, size: 16, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    next == null
+                        ? l10n.upNext
+                        : '${l10n.upNext} • ${next.title}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.expand_less_rounded, size: 18, color: scheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -14,6 +14,7 @@ class L10n {
   String get forYou => _t('For You', 'Untukmu');
   String get recentlyPlayed => _t('Recently played', 'Baca cepat');
   String get search => _t('Search', 'Cari');
+  String get queue => _t('Queue', 'Antrian');
   String get playlist => _t('Playlist', 'Playlist');
   String get changeTheme => _t('Change theme', 'Ganti tema');
   String get changeLanguage => _t('Language', 'Ganti bahasa');
@@ -42,6 +43,10 @@ class L10n {
   String get queueEmptySubtitle => _t('Search a song then tap the add button, or play straight from results.', 'Cari lagu lalu tekan tombol tambah, atau langsung mainkan dari hasil pencarian.');
   String queueCount(int count) => _t('QUEUE · $count', 'ANTRIAN · $count');
   String get clearQueue => _t('Clear queue', 'Kosongkan antrian');
+  String get clearQueueTitle => _t('Clear queue?', 'Kosongkan antrian?');
+  String get clearQueueConfirm => _t('Every song currently in the queue will be removed.', 'Semua lagu di antrian akan dihapus.');
+  String get upNextShort => _t('Up next', 'Berikutnya');
+  String get removeFromQueueShort => _t('Remove from queue', 'Hapus dari antrian');
 
   // Player / NowPlaying
   String get nowPlaying => _t('NOW PLAYING', 'SEDANG DIPUTAR');
