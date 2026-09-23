@@ -31,45 +31,66 @@ Future<String> _fromBackend(String videoId, {String quality = '128k'}) async {
 
 Future<String> _fromLocal(String videoId) async {
   final clients = [
+    ('tv', YoutubeApiClient.tv),
     ('androidVr', YoutubeApiClient.androidVr),
     ('ios', YoutubeApiClient.ios),
+    ('safari', YoutubeApiClient.safari),
     ('mweb', YoutubeApiClient.mweb),
   ];
   final yt = YoutubeExplode();
   try {
-    for (final (label, client) in clients) {
-      StreamManifest manifest;
-      try {
-        manifest = await yt.videos.streams.getManifest(videoId, ytClients: [client]).timeout(const Duration(seconds: 8));
-      } catch (e) {
-        debugPrint('stream: client $label manifest failed: $e');
-        continue;
-      }
-      final audio = manifest.audioOnly.withHighestBitrate();
-      try {
-        final probe = await Dio().getUri(
-          audio.url,
-          options: Options(
-            headers: {'Range': 'bytes=0-0'},
-            validateStatus: (s) => s != null,
-            sendTimeout: const Duration(seconds: 8),
-            receiveTimeout: const Duration(seconds: 8),
-          ),
-        );
-        final status = probe.statusCode;
-        if (status == 200 || status == 206) {
-          debugPrint('stream: local ok ($label)');
-          return audio.url.toString();
-        }
-        debugPrint('stream: client $label url rejected: $status');
-      } catch (e) {
-        debugPrint('stream: client $label url probe failed: $e');
-      }
-    }
+    String? result = await _tryClients(yt, videoId, clients);
+    if (result != null) return result;
+    debugPrint('stream: all clients failed, retrying once with tv+ios');
+    await Future<void>.delayed(const Duration(seconds: 3));
+    result = await _tryClients(yt, videoId, [
+      ('tv', YoutubeApiClient.tv),
+      ('ios', YoutubeApiClient.ios),
+    ]);
+    if (result != null) return result;
     throw Exception('all local clients failed');
   } finally {
     yt.close();
   }
+}
+
+Future<String?> _tryClients(
+  YoutubeExplode yt,
+  String videoId,
+  List<(String, YoutubeApiClient)> clients,
+) async {
+  for (final (label, client) in clients) {
+    StreamManifest manifest;
+    try {
+      manifest = await yt.videos.streams
+          .getManifest(videoId, ytClients: [client])
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      debugPrint('stream: client $label manifest failed: $e');
+      continue;
+    }
+    final audio = manifest.audioOnly.withHighestBitrate();
+    try {
+      final probe = await Dio().getUri(
+        audio.url,
+        options: Options(
+          headers: {'Range': 'bytes=0-0'},
+          validateStatus: (s) => s != null,
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+      final status = probe.statusCode;
+      if (status == 200 || status == 206) {
+        debugPrint('stream: local ok ($label)');
+        return audio.url.toString();
+      }
+      debugPrint('stream: client $label url rejected: $status');
+    } catch (e) {
+      debugPrint('stream: client $label url probe failed: $e');
+    }
+  }
+  return null;
 }
 
 Future<String> resolveStreamUrl(String videoId, {String quality = '128k'}) async {
