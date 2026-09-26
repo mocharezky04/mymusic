@@ -86,11 +86,14 @@ class AudioPlayerHandler extends BaseAudioHandler {
     required int startIndex,
     bool autoPlay = true,
   }) async {
+    // Loop mode dipasang sebelum source dimuat: setLoopMode setelahnya menambah
+    // satu await di antara setAudioSources dan play(), jadi audio mulai
+    // sedikit lebih lambat tanpa alasan.
+    await _player.setLoopMode(_toLoopMode(_repeatMode));
     await _player.setAudioSources(
       [for (final (track, url) in items) _source(track, url)],
       initialIndex: startIndex.clamp(0, items.length - 1),
     );
-    await _player.setLoopMode(_toLoopMode(_repeatMode));
     queue.add([for (final (track, url) in items) mediaItemForTrack(track, url)]);
     if (autoPlay) unawaited(_player.play());
   }

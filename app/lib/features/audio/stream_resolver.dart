@@ -128,6 +128,12 @@ Future<String?> _tryClients(
 /// [probe] memvalidasi URL dengan satu request Range 1 byte. Melewatkannya
 /// membuat resolve ~1 detik lebih cepat, dan URL rusak tetap tertangkap sebagai
 /// error playback di [_applyQueue], bukan sebagai hening diam-diam.
+///
+/// Bukti logcat 2026-09-26 (sesudah timeout dinaikkan ke 10 dtk + retry 2 dtk):
+/// satu lagu butuh 26,7 detik = 10s visionos + 10s ios + 3s jeda + 3,7s retry.
+/// Timeout panjang justru memperpanjang, bukan memperbaiki. Backend yang
+/// cache-hit membalas dalam ~1,5 detik, jadi lokal dan backend dijalankan
+/// bersamaan dan yang pertama selesai menang. Batas global 12 detik.
 Future<String> resolveStreamUrl(
   String videoId, {
   String quality = '128k',
@@ -135,57 +141,47 @@ Future<String> resolveStreamUrl(
   bool isStartTrack = false,
 }) async {
   final t0 = DateTime.now().millisecondsSinceEpoch;
-  if (!kIsWeb) {
-    // Batas global: kalau sudah lewat, langsung ke backend atau error. Ini
-    // yang mencegah "loading" tanpa ujung.
-    const globalCap = Duration(seconds: 15);
-    try {
-      // Bukti logcat 2026-09-26: manifest client visionos TimeoutException
-      // setelah 6,0 detik untuk beberapa video, padahal video lain selesai
-      // di 2 detik. 6 detik terlalu pendek; 10 detik + 1 retry menutup itu.
-      final first = isStartTrack
-          ? const Duration(seconds: 10)
-          : const Duration(seconds: 20);
-      final capMs = globalCap.inMilliseconds;
+  const globalCap = Duration(seconds: 14);
 
-      Future<String?> tryLocal(int attemptIndex) async {
-        final left = capMs - (DateTime.now().millisecondsSinceEpoch - t0);
-        if (left <= 500) return null;
-        final timeout = Duration(
-          milliseconds: left < first.inMilliseconds
-              ? left
-              : first.inMilliseconds,
-        );
-        return _fromLocal(
-          videoId,
-          probe: probe,
-          manifestTimeout: timeout,
-          retryOnce: !isStartTrack || attemptIndex == 0,
-        );
-      }
-
-      var result = await tryLocal(0);
-      if (result == null && isStartTrack) {
-        debugPrint('stream: lokal gagal, retry singkat 2s lalu coba lagi');
-        await Future<void>.delayed(const Duration(seconds: 2));
-        result = await tryLocal(1);
-      }
-      if (result != null) {
-        debugPrint(
-          'stream: resolve total ${DateTime.now().millisecondsSinceEpoch - t0}ms '
-          '(local, probe=$probe)',
-        );
-        return result;
-      }
-      debugPrint('stream: local gagal, falling back to backend');
-    } catch (_) {
-      debugPrint('stream: local failed, falling back to backend');
-    }
+  if (kIsWeb) {
+    return _fromBackend(videoId, quality: quality);
   }
-  final url = await _fromBackend(videoId, quality: quality);
+
+  // Bukti logcat: manifest lokal yang BERHASIL punya rentang 1827 ms sampai
+  // 7985 ms, jadi batas 6 detik memotong yang sebenarnya bisa berbunyi.
+  // Karena backend kini berjalan paralel, menambah batas lokal tidak menambah
+  // latensi total: mana pun yang selesai duluan yang menang.
+  final localTimeout = const Duration(seconds: 12);
+
+  Future<String?> localAttempt() =>
+      _fromLocal(
+        videoId,
+        probe: probe,
+        manifestTimeout: localTimeout,
+        retryOnce: false,
+      );
+
+  Future<String?> backendAttempt() => _fromBackend(videoId, quality: quality);
+
+  final winner = await Future.any<String?>([
+    localAttempt().then((v) => v == null ? null : 'L$v'),
+    backendAttempt().then((v) => v == null ? null : 'B$v'),
+    Future<String?>.delayed(globalCap),
+  ]);
+
+  if (winner != null) {
+    final url = winner.substring(1);
+    final via = winner[0] == 'L' ? 'local' : 'backend';
+    debugPrint(
+      'stream: resolve total ${DateTime.now().millisecondsSinceEpoch - t0}ms '
+      '($via menang)',
+    );
+    return url;
+  }
+
   debugPrint(
-    'stream: resolve total ${DateTime.now().millisecondsSinceEpoch - t0}ms '
-    '(backend)',
+    'stream: resolve gagal dalam ${DateTime.now().millisecondsSinceEpoch - t0}ms '
+    '(lokal + backend tidak menjawab dalam ${globalCap.inSeconds} dtk)',
   );
-  return url;
+  throw Exception('stream unavailable');
 }
