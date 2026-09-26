@@ -31,6 +31,9 @@ class AudioPlayerHandler extends BaseAudioHandler {
 
   bool get isQueueLoaded => _player.audioSources.isNotEmpty;
 
+  /// Panjang antrian yang sudah dimuat.
+  int get queueLength => _player.audioSources.length;
+
   AudioPlayer get player => _player;
 
   PlaybackState _transformEvent(PlaybackEvent event) {
@@ -82,6 +85,13 @@ class AudioPlayerHandler extends BaseAudioHandler {
   Future<void> addLast(Track track, String url) async {
     await _player.addAudioSource(_source(track, url));
     queue.add(queue.value + [mediaItemForTrack(track, url)]);
+  }
+
+  Future<void> insert(int index, Track track, String url) async {
+    if (index < 0 || index > _player.audioSources.length) return;
+    await _player.insertAudioSource(index, _source(track, url));
+    final items = List<MediaItem>.of(queue.value)..insert(index, mediaItemForTrack(track, url));
+    queue.add(items);
   }
 
   @override

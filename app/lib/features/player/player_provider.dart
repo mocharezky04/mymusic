@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/l10n.dart';
 import '../../core/models.dart';
 import '../audio/audio_handler.dart';
 import '../audio/stream_resolver.dart';
@@ -120,6 +121,15 @@ Stream<T> _throttleEvents<T>(Stream<T> source, Duration interval) {
   ));
 }
 
+/// Memutar antrian sehingga lagu pada [startIndex] menjadi elemen pertama, lalu
+/// mengembalikan sisanya. Handler dibangun sebagai prefix dari hasil ini, jadi
+/// indeks handler dan indeks state selalu menunjuk lagu yang sama.
+List<T> rotateQueue<T>(List<T> order, int startIndex) {
+  if (order.isEmpty) return const [];
+  final i = startIndex.clamp(0, order.length - 1);
+  return <T>[...order.sublist(i), ...order.sublist(0, i)];
+}
+
 class PlayerController extends Notifier<PlayerState> {
   AudioPlayerHandler? _handler;
   final Map<String, String> _srcCache = {};
@@ -133,6 +143,15 @@ class PlayerController extends Notifier<PlayerState> {
   int _lastRecordedIndex = -1;
   bool _applying = false;
   final Set<String> _failedVideos = {};
+
+  // Pesan error dibuat dalam bahasa aktif saat error terjadi, lalu disimpan
+  // sebagai teks siap tampil supaya SnackBar tidak perlu tahu asal-usulnya.
+  L10n get l10n => ref.read(l10nProvider);
+
+  // Invarian: [AudioPlayerHandler] selalu berisi prefix dari [PlayerState.queue]
+  // pada posisi yang sama, dan [_queueGen] membatalkan prefetch yang sudah usang.
+  int _queueGen = 0;
+  bool _prefetching = false;
 
   @override
   PlayerState build() {
@@ -196,7 +215,7 @@ class PlayerController extends Notifier<PlayerState> {
       state = state.copyWith(
         loading: false,
         playing: false,
-        error: ps.errorMessage ?? 'A playback error occurred',
+        error: l10n.playError,
       );
       return;
     }
@@ -298,63 +317,125 @@ class PlayerController extends Notifier<PlayerState> {
     if (order.isEmpty) return false;
     if (_applying) return false;
     _applying = true;
+    final gen = ++_queueGen;
     try {
-      final startTrack = order[startIndex];
-      String startUrl;
+      // Lagu awal diputar dari posisi 0 supaya handler (prefix) dan state
+      // memakai indeks yang sama tanpa harus memutar ulang handler.
+      final rotated = rotateQueue(order, startIndex);
+      final startTrack = rotated.first;
+      final String startUrl;
       try {
         startUrl = await _resolve(startTrack, noRetry: true);
       } catch (e) {
         debugPrint('stream: failed to resolve start track: $e');
-        state = state.copyWith(error: 'Failed to load ${startTrack.title}');
+        state = state.copyWith(error: l10n.trackLoadFailed(startTrack.title));
+        unawaited(_ensurePrefetch());
         return false;
       }
       _handler!.stop();
-      _lastRecordedIndex = startIndex - 1;
-      state = state.copyWith(queue: order, index: startIndex, loading: true, error: null);
+      _lastRecordedIndex = -1;
+      state = state.copyWith(queue: rotated, index: 0, loading: true, error: null);
 
-      await _handler!.loadQueue([(startTrack, startUrl)], startIndex: 0, autoPlay: autoPlay);
+      final items = <(Track, String)>[(startTrack, startUrl)];
+      if (rotated.length > 1) {
+        try {
+          items.add((rotated[1], await _resolve(rotated[1])));
+        } catch (e) {
+          debugPrint('stream: next track unavailable: $e');
+        }
+      }
+      await _handler!.loadQueue(items, startIndex: 0, autoPlay: autoPlay);
+      if (gen != _queueGen) return false;
+      final loaded = items[0].$1;
       state = state.copyWith(
-        queue: order,
         index: 0,
         loading: false,
         position: Duration.zero,
-        duration: startTrack.durationSeconds > 0
-            ? Duration(seconds: startTrack.durationSeconds)
+        duration: loaded.durationSeconds > 0
+            ? Duration(seconds: loaded.durationSeconds)
             : Duration.zero,
         error: null,
       );
       _persistQueue();
-
-      unawaited(_prefetchRest(order, startIndex));
+      unawaited(_prefetch(gen));
       return true;
     } on Exception {
       _handler!.stop();
-      state = state.copyWith(loading: false, playing: false, error: 'Failed to load playback queue');
+      state = state.copyWith(
+        loading: false,
+        playing: false,
+        error: l10n.queueLoadFailed,
+      );
+      unawaited(_ensurePrefetch());
       return false;
     } finally {
       _applying = false;
     }
   }
 
-  Future<void> _prefetchRest(List<Track> order, int startIndex) async {
-    for (var i = 0; i < order.length; i++) {
-      if (i == startIndex) continue;
-      if (!_handler!.isQueueLoaded) return;
-      try {
-        final url = await _resolve(order[i]);
-        if (!_handler!.isQueueLoaded) return;
-        await _handler!.addLast(order[i], url);
-      } catch (e) {
-        debugPrint('stream: prefetch skip ${order[i].title}: $e');
+  /// Handler selalu berisi prefix dari antrian pada posisi yang sama. Setiap
+  /// putaran memuat satu lagu lagi tepat di ujung handler; lagu yang gagal
+  /// dikeluarkan dari antrian supaya tidak pernah ada lagu hantu.
+  Future<void> _prefetch(int gen) async {
+    if (_prefetching) return;
+    _prefetching = true;
+    try {
+      while (gen == _queueGen && _handler!.isQueueLoaded) {
+        final loaded = _handler!.queueLength;
+        if (loaded >= state.queue.length) return;
+        final track = state.queue[loaded];
+        String url;
+        try {
+          url = await _resolve(track);
+        } catch (e) {
+          if (gen != _queueGen) return;
+          debugPrint('stream: prefetch drop ${track.title}: $e');
+          _dropQueueAt(loaded);
+          continue;
+        }
+        if (gen != _queueGen || !_handler!.isQueueLoaded) return;
+        if (loaded >= state.queue.length || state.queue[loaded].id != track.id) {
+          continue;
+        }
+        await _handler!.addLast(track, url);
       }
+    } finally {
+      _prefetching = false;
     }
+  }
+
+  void _dropQueueAt(int index) {
+    final queue = List<Track>.of(state.queue);
+    if (index < 0 || index >= queue.length) return;
+    queue.removeAt(index);
+    if (queue.isEmpty) {
+      clearQueue();
+      return;
+    }
+    var current = state.index;
+    if (current > index) current -= 1;
+    if (current >= queue.length) current = queue.length - 1;
+    state = state.copyWith(queue: queue, index: current);
+    _persistQueue();
+  }
+
+  Future<void> _ensurePrefetch() {
+    if (_prefetching || _handler == null || !_handler!.isQueueLoaded) {
+      return Future<void>.value();
+    }
+    if (_handler!.queueLength >= state.queue.length) return Future<void>.value();
+    return _prefetch(_queueGen);
   }
 
   Future<void> playFrom(List<Track> tracks, int index) async {
     if (tracks.isEmpty || index < 0 || index >= tracks.length) return;
     final track = tracks[index];
     if (!track.source.playable) {
-      state = PlayerState(queue: List.of(tracks), index: index, error: 'This source cannot be played yet');
+      state = state.copyWith(
+        queue: List.of(tracks),
+        index: index,
+        error: l10n.trackNotPlayable,
+      );
       return;
     }
     final playable = [for (final t in tracks) if (t.source.playable) t];
@@ -386,19 +467,20 @@ class PlayerController extends Notifier<PlayerState> {
       await playFrom([track], 0);
       return;
     }
-    if (_handler!.isQueueLoaded) {
+    state = state.copyWith(queue: [...state.queue, track]);
+    _persistQueue();
+    // Lagu baru masuk antrian setelah yang sudah dimuat, lalu prefetch
+    // melanjutkan sendiri. Handler tidak pernah增添了 di posisi yang salah.
+    if (_handler!.isQueueLoaded && _handler!.queueLength == state.queue.length - 1) {
       try {
         final url = await _resolve(track);
-        await _handler!.addLast(track, url);
-        state = state.copyWith(queue: [...state.queue, track]);
-        _persistQueue();
-        return;
+        if (_handler!.isQueueLoaded && _handler!.queueLength < state.queue.length) {
+          await _handler!.addLast(track, url);
+        }
       } on Exception {
-        state = state.copyWith(error: 'Failed to add ${track.title}');
-        return;
+        debugPrint('stream: add to queue deferred: ${track.title}');
       }
     }
-    state = state.copyWith(queue: [...state.queue, track]);
     _persistQueue();
   }
 
@@ -409,21 +491,9 @@ class PlayerController extends Notifier<PlayerState> {
       return;
     }
     final insertAt = state.index < 0 ? 0 : min(state.index + 1, state.queue.length);
-    if (_handler!.isQueueLoaded) {
-      try {
-        final url = await _resolve(track);
-        await _handler!.addLast(track, url);
-        if (insertAt < state.queue.length) await _handler!.move(state.queue.length, insertAt);
-        state = state.copyWith(queue: [...state.queue]..insert(insertAt, track));
-        _persistQueue();
-        return;
-      } on Exception {
-        state = state.copyWith(error: 'Failed to add ${track.title}');
-        return;
-      }
-    }
     state = state.copyWith(queue: [...state.queue]..insert(insertAt, track));
     _persistQueue();
+    await _insertIntoHandler(insertAt, track);
   }
 
   Future<void> addAt(Track track, int index, {required bool shiftCurrent}) async {
@@ -434,23 +504,34 @@ class PlayerController extends Notifier<PlayerState> {
     queue.insert(insertAt, track);
     var current = oldCurrent;
     if (shiftCurrent && oldCurrent >= insertAt) current = oldCurrent + 1;
-    if (_handler!.isQueueLoaded) {
-      try {
-        final url = await _resolve(track);
-        await _handler!.addLast(track, url);
-        final last = queue.length - 1;
-        if (insertAt < last) await _handler!.move(last, insertAt);
-        state = state.copyWith(queue: queue, index: current);
-        _persistQueue();
-        return;
-      } on Exception {
-        state = state.copyWith(queue: queue, index: current, error: 'Failed to restore ${track.title}');
-        _persistQueue();
-        return;
-      }
-    }
     state = state.copyWith(queue: queue, index: current);
     _persistQueue();
+    await _insertIntoHandler(insertAt, track);
+  }
+
+  /// Sisipan hanya bisa dilakukan di dalam region yang sudah dimuat atau tepat di
+  /// ujungnya. Sisipan yang lebih jauh ditangani prefetch, jadi handler tidak
+  /// pernah holding lagu di urutan yang tidak sama dengan antrian.
+  Future<void> _insertIntoHandler(int insertAt, Track track) async {
+    final handler = _handler;
+    if (handler == null || !handler.isQueueLoaded) return;
+    final loaded = handler.queueLength;
+    if (insertAt > loaded) {
+      unawaited(_ensurePrefetch());
+      return;
+    }
+    try {
+      final url = await _resolve(track);
+      if (!handler.isQueueLoaded) return;
+      if (handler.queueLength != loaded) {
+        unawaited(_ensurePrefetch());
+        return;
+      }
+      await handler.insert(insertAt, track, url);
+    } on Exception {
+      debugPrint('stream: insert at $insertAt deferred: ${track.title}');
+      unawaited(_ensurePrefetch());
+    }
   }
 
   void toggle() {
@@ -494,21 +575,44 @@ class PlayerController extends Notifier<PlayerState> {
       currentIndex += 1;
     }
     state = state.copyWith(queue: queue, index: currentIndex);
-    if (_handler!.isQueueLoaded) _handler!.move(oldIndex, newIndex);
+    final handler = _handler;
+    if (handler == null || !handler.isQueueLoaded) {
+      _persistQueue();
+      return;
+    }
+    final loaded = handler.queueLength;
+    if (oldIndex < loaded && newIndex < loaded) {
+      handler.move(oldIndex, newIndex);
+    } else if (oldIndex < loaded) {
+      // Tujuan di luar region yang sudah dimuat: keluarkan dari handler,
+      // prefetch akan menambahkannya lagi di posisi yang benar.
+      handler.removeAt(oldIndex);
+    } else if (newIndex < loaded) {
+      unawaited(_insertIntoHandler(newIndex, moved));
+    }
     _persistQueue();
+    unawaited(_ensurePrefetch());
   }
 
   void removeAt(int index) {
     if (index < 0 || index >= state.queue.length) return;
-    final queue = List<Track>.of(state.queue)..removeAt(index);
+    final queue = List<Track>.from(state.queue)..removeAt(index);
+    if (queue.isEmpty) {
+      clearQueue();
+      return;
+    }
     var currentIndex = state.index;
     if (currentIndex > index) currentIndex -= 1;
     state = state.copyWith(queue: queue, index: currentIndex);
-    if (_handler!.isQueueLoaded) _handler!.removeAt(index);
+    final handler = _handler;
+    if (handler != null && handler.isQueueLoaded && index < handler.queueLength) {
+      handler.removeAt(index);
+    }
     _persistQueue();
   }
 
   void clearQueue() {
+    _queueGen++;
     _handler!.stop();
     state = PlayerState(repeat: state.repeat, shuffle: state.shuffle);
     _baseOrder = const [];
@@ -539,12 +643,14 @@ class PlayerController extends Notifier<PlayerState> {
     if (!state.shuffle) {
       final order = _shuffledOrder(base, _baseIndex(current));
       await _applyQueue(order, startIndex: 0, autoPlay: state.playing);
+      if (!state.shuffle) return;
       state = state.copyWith(shuffle: true);
       _persistPlayMode();
     } else {
       _baseOrder = base;
       await _applyQueue(base, startIndex: _baseIndex(current), autoPlay: state.playing);
-      state = state.copyWith(shuffle: false, index: _baseIndex(current));
+      if (state.shuffle) return;
+      state = state.copyWith(shuffle: false);
       _persistPlayMode();
     }
   }
