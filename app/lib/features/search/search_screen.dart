@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api.dart';
 import '../../core/l10n.dart';
+import '../../core/models.dart';
 import '../../core/widgets/state_shell.dart';
 import '../player/player_provider.dart';
 import '../playlist/add_to_playlist_sheet.dart';
-import '../../core/models.dart';
 import 'search_providers.dart';
 import 'track_tile.dart';
 
@@ -83,24 +84,37 @@ class _ResultsView extends ConsumerWidget {
   final AsyncValue<List<Track>> results;
   final String query;
 
+  String _errorCause(Object err, L10n l10n) {
+    if (err is ApiKeyRejectedException) return l10n.appBuildRejected;
+    if (err is ServerOfflineException) return l10n.serverUnreachable;
+    if (err is DioApiException) return l10n.serverBusy;
+    return l10n.searchRetry;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(l10nProvider);
     return results.when(
-      loading: () =>
-          StateLoading(title: l10n.searchLoading, subtitle: l10n.searchRetry),
-      error: (err, _) => StateMessage(
-        icon: Icons.cloud_off_rounded,
-        title: l10n.searchFailed,
-        subtitle: l10n.searchRetry,
-        action: TextButton.icon(
-          onPressed: () {
-            ref.read(searchControllerProvider.notifier).run(query);
-          },
-          icon: const Icon(Icons.refresh, size: 18),
-          label: Text(l10n.tryAgain),
-        ),
-      ),
+      loading: () => StateLoading(title: l10n.searchLoading),
+      error: (err, _) {
+        final cause = _errorCause(err, l10n);
+        return StateMessage(
+          icon: cause == l10n.serverUnreachable
+              ? Icons.wifi_off_rounded
+              : Icons.cloud_off_rounded,
+          title: l10n.searchFailed,
+          subtitle: cause,
+          action: cause == l10n.appBuildRejected
+              ? null
+              : TextButton.icon(
+                  onPressed: () {
+                    ref.read(searchControllerProvider.notifier).run(query);
+                  },
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(l10n.tryAgain),
+                ),
+        );
+      },
       data: (tracks) {
         if (tracks.isEmpty) {
           return StateMessage(

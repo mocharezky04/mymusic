@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config.dart';
@@ -9,6 +10,11 @@ import 'models.dart';
 class DioApiException implements Exception {}
 
 class ServerOfflineException implements Exception {}
+
+/// API key ditolak server (401/403). Ini biasanya build lama dengan kunci yang
+/// sudah dirotasi; pesan error harus menyebut ini supaya pengguna tahu harus
+/// memperbarui aplikasi, bukan mengganti kata kunci.
+class ApiKeyRejectedException implements Exception {}
 
 class MyMusicApi {
   MyMusicApi(String baseUrl)
@@ -37,10 +43,10 @@ class MyMusicApi {
     String query, {
     List<String> sources = const ['youtube', 'ytmusic'],
   }) async {
-    final res = await _dio.get(
-      '/search',
-      queryParameters: {'q': query, 'sources': sources.join(',')},
-    );
+    final res = await _guard(() => _dio.get(
+          '/search',
+          queryParameters: {'q': query, 'sources': sources.join(',')},
+        ));
     final data = res.data as Map<String, dynamic>;
     final results = data['results'] as List<dynamic>? ?? const [];
     return results.map((e) => Track.fromJson(e as Map<String, dynamic>)).toList();
@@ -175,7 +181,12 @@ class MyMusicApi {
     try {
       return await run();
     } on DioException catch (e) {
-      if (e.response?.statusCode == 503) throw DioApiException();
+      final status = e.response?.statusCode;
+      if (e.response != null) {
+        debugPrint('api: HTTP $status ${e.requestOptions.path}');
+      }
+      if (status == 401 || status == 403) throw ApiKeyRejectedException();
+      if (status == 503) throw DioApiException();
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout) {
         throw ServerOfflineException();

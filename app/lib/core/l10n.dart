@@ -54,6 +54,18 @@ class L10n {
     'Try another keyword or change the source.',
     'Coba kata kunci lain atau ubah sumber pencarian.',
   );
+  String get appBuildRejected => _t(
+    'The server rejected this app build. Install the newest version and try again.',
+    'Server menolak versi aplikasi ini. Pasang versi terbaru lalu coba lagi.',
+  );
+  String get serverUnreachable => _t(
+    'Cannot reach the server. Check your connection.',
+    'Tidak bisa menghubungi server. Periksa koneksimu.',
+  );
+  String get serverBusy => _t(
+    'The server had a problem. Try again in a moment.',
+    'Server sedang bermasalah. Coba lagi sebentar lagi.',
+  );
   String get searchEmpty => _t(
     'Type to search. Recent searches appear here.',
     'Ketik untuk mencari. Pencarian terbaru muncul di sini.',

@@ -6,7 +6,6 @@ import '../../core/api.dart';
 import '../../core/l10n.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/state_shell.dart';
 import '../player/player_provider.dart';
 import '../playlist/add_to_playlist_sheet.dart';
 import '../search/search_providers.dart' show apiProvider;
@@ -869,6 +868,13 @@ final tracksProvider =
 class _RecommendedSection extends ConsumerWidget {
   const _RecommendedSection();
 
+  static String _recommendationCause(Object err, L10n l10n) {
+    if (err is ApiKeyRejectedException) return l10n.appBuildRejected;
+    if (err is ServerOfflineException) return l10n.serverUnreachable;
+    if (err is DioApiException) return l10n.serverBusy;
+    return l10n.loadRecommendationsFailed;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rec = ref.watch(recommendationProvider);
@@ -877,9 +883,9 @@ class _RecommendedSection extends ConsumerWidget {
     final controller = ref.read(playerControllerProvider.notifier);
 
     return rec.when(
-      loading: () => StateLoading(
-        title: l10n.loadRecommendationsLoading,
-        subtitle: l10n.loadRecommendationsFailed,
+      loading: () => const Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+        child: LinearProgressIndicator(minHeight: 2),
       ),
       error: (err, _) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -887,17 +893,16 @@ class _RecommendedSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              err is ServerOfflineException
-                  ? l10n.serverOffline
-                  : l10n.loadRecommendationsFailed,
-              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              _recommendationCause(err, l10n),
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
-            TextButton.icon(
-              onPressed: () => ref.invalidate(recommendationProvider),
-              icon: const Icon(Icons.refresh, size: 16),
-              label: Text(l10n.tryAgain, style: const TextStyle(fontSize: 12)),
-            ),
+            if (err is! ApiKeyRejectedException)
+              TextButton.icon(
+                onPressed: () => ref.invalidate(recommendationProvider),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: Text(l10n.tryAgain, style: const TextStyle(fontSize: 12)),
+              ),
           ],
         ),
       ),

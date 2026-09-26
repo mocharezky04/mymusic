@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
@@ -26,8 +27,10 @@ class SearchController extends AsyncNotifier<List<Track>> {
       if (results.isNotEmpty) {
         ref.read(historyProvider.notifier).add(q);
       }
-    } catch (err) {
-      state = AsyncValue.error(err, StackTrace.current);
+    } catch (err, st) {
+      debugPrint('search: "$q" failed: $err');
+      debugPrintStack(stackTrace: st, maxFrames: 2);
+      state = AsyncValue.error(err, st);
     }
   }
 
