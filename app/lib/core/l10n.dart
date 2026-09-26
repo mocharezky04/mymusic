@@ -73,8 +73,6 @@ class L10n {
   );
   String get searchNoResults => _t('No results', 'Tidak ada hasil');
   String get searchStartHere => _t('Start here', 'Mulai dari sini');
-  String get searchHistoryLabel => _t('Search history', 'Riwayat pencarian');
-  String get searchSuggestionsLabel => _t('Suggestions', 'Saran');
   String get useThisQuery => _t('Use this search', 'Pakai pencarian ini');
   String get mixLabel => _t('Mix', 'Mix');
   String get mixSubtitle => _t(
