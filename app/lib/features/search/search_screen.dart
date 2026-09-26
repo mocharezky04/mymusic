@@ -61,7 +61,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       setState(() => _suggestions = const []);
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 350), () => _fetchSuggestions(value));
+    _debounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _fetchSuggestions(value),
+    );
   }
 
   void _onFocusChanged() {
@@ -145,8 +148,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   onPick: _runNow,
                 )
               : _submitted.isEmpty
-                  ? _HistoryView(onPick: _runNow)
-                  : _ResultsView(results: results, query: _submitted),
+              ? _HistoryView(onPick: _runNow)
+              : _ResultsView(results: results, query: _submitted),
         ),
       ],
     );
@@ -173,90 +176,73 @@ class _SuggestOverlay extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
     final history = ref.watch(historyProvider).value ?? const <String>[];
-    final q = query.toLowerCase();
+    final q = query.trim().toLowerCase();
 
-    final historyMatches =
-        history.where((h) => h.toLowerCase().contains(q)).toList();
-    final historyRest =
-        history.where((h) => !h.toLowerCase().contains(q)).toList();
-    final seen = <String>{...historyMatches};
-    final freshSuggestions =
-        suggestions.where((s) => !seen.contains(s)).toList();
-
-    if (history.isEmpty && suggestions.isEmpty) {
-      return const SizedBox.shrink();
+    // Satu daftar tanpa header section: riwayat yang diawali query lebih dulu,
+    // lalu riwayat yang hanya mengandung, lalu saran server. Dedup by teks.
+    final seen = <String>{};
+    final rows = <_OverlayItem>[];
+    if (q.isNotEmpty) {
+      final starts = <String>[];
+      final contains = <String>[];
+      for (final item in history) {
+        final lower = item.toLowerCase();
+        if (lower.startsWith(q)) {
+          starts.add(item);
+        } else if (lower.contains(q)) {
+          contains.add(item);
+        }
+      }
+      for (final item in [...starts, ...contains]) {
+        if (seen.add(item.toLowerCase())) {
+          rows.add(_OverlayItem.history(item));
+        }
+      }
+    }
+    for (final item in suggestions) {
+      if (seen.add(item.toLowerCase())) {
+        rows.add(_OverlayItem.suggestion(item));
+      }
     }
 
-    return ListView(
-      padding: const EdgeInsets.only(top: 4, bottom: 16),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      children: [
-        if (historyMatches.isNotEmpty) ...[
-          _OverlayLabel(l10n.searchHistoryLabel),
-          for (final item in historyMatches)
-            _OverlayRow(
-              icon: Icons.history_rounded,
-              text: item,
-              highlighted: q,
-              onTap: () => onPick(item),
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return ColoredBox(
+      color: scheme.surface,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 4, bottom: 16),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        itemCount: rows.length,
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          return _OverlayRow(
+            icon: row.icon,
+            text: row.text,
+            highlighted: q,
+            onTap: () => onPick(row.text),
+            trailing: IconButton(
+              icon: const Icon(Icons.north_west_rounded, size: 18),
+              tooltip: l10n.useThisQuery,
+              onPressed: () => onFill(row.text),
             ),
-        ],
-        if (historyRest.isNotEmpty) ...[
-          _OverlayLabel(l10n.searchHistoryLabel),
-          for (final item in historyRest)
-            _OverlayRow(
-              icon: Icons.history_rounded,
-              text: item,
-              highlighted: q,
-              onTap: () => onPick(item),
-            ),
-        ],
-        if (freshSuggestions.isNotEmpty) ...[
-          _OverlayLabel(l10n.searchSuggestionsLabel),
-          for (final item in freshSuggestions)
-            _OverlayRow(
-              icon: Icons.search_rounded,
-              text: item,
-              highlighted: q,
-              onTap: () => onPick(item),
-              trailing: IconButton(
-                icon: const Icon(Icons.north_west_rounded, size: 18),
-                tooltip: l10n.useThisQuery,
-                onPressed: () => onFill(item),
-              ),
-            ),
-        ],
-      ],
-    ).withBackground(scheme);
-  }
-}
-
-extension on Widget {
-  Widget withBackground(ColorScheme scheme) => ColoredBox(
-        color: scheme.surface,
-        child: this,
-      );
-}
-
-class _OverlayLabel extends StatelessWidget {
-  const _OverlayLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+          );
+        },
       ),
     );
   }
+}
+
+class _OverlayItem {
+  const _OverlayItem._(this.icon, this.text);
+
+  factory _OverlayItem.history(String text) =>
+      _OverlayItem._(Icons.history_rounded, text);
+
+  factory _OverlayItem.suggestion(String text) =>
+      _OverlayItem._(Icons.search_rounded, text);
+
+  final IconData icon;
+  final String text;
 }
 
 class _OverlayRow extends StatelessWidget {
@@ -405,55 +391,72 @@ class _ResultsView extends ConsumerWidget {
           playerControllerProvider.select((s) => s.playing),
         );
         final controller = ref.read(playerControllerProvider.notifier);
+        final rows = _interleave(videos, mixes);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (videos.isNotEmpty) ...[
-              _ResultsHeader(
-                l10n: l10n,
-                count: videos.length,
-                onPlayAll: () => controller.playFrom(videos, 0),
-              ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  itemCount: videos.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 2),
-                  itemBuilder: (context, index) {
-                    final track = videos[index];
-                    final isCurrent = currentId == track.id;
-                    return TrackTile(
-                      track: track,
-                      isCurrent: isCurrent,
-                      isPlaying: playing,
-                      onTap: () => controller.playFrom([track], 0),
-                      trailing: _ResultMenu(
-                        l10n: l10n,
-                        track: track,
-                        controller: controller,
-                      ),
+            _ResultsHeader(
+              l10n: l10n,
+              count: videos.length,
+              onPlayAll: () => controller.playFrom(videos, 0),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 16),
+                itemCount: rows.length,
+                itemBuilder: (context, index) {
+                  final row = rows[index];
+                  if (row.mix != null) {
+                    return _MixCard(
+                      mix: row.mix!,
+                      onPlay: (mix) => _playMix(context, ref, mix),
                     );
-                  },
-                ),
+                  }
+                  final track = row.video!;
+                  final isCurrent = currentId == track.id;
+                  return TrackTile(
+                    track: track,
+                    isCurrent: isCurrent,
+                    isPlaying: playing,
+                    onTap: () => controller.playFrom([track], 0),
+                    trailing: _ResultMenu(
+                      l10n: l10n,
+                      track: track,
+                      controller: controller,
+                    ),
+                  );
+                },
               ),
-            ] else
-              const Spacer(),
-            if (mixes.isNotEmpty)
-              _MixSection(
-                mixes: mixes,
-                onPlay: (mix) => _playMix(context, ref, mix),
-              ),
+            ),
           ],
         );
       },
     );
   }
 
-  Future<void> _playMix(
-    BuildContext context,
-    WidgetRef ref,
-    Track mix,
-  ) async {
+  /// Satu daftar kontinu: video, lalu sisipkan mix di posisi 3, 12, dan
+  /// sisanya di akhir. Maksimal 3 mix per halaman.
+  static List<_ResultRow> _interleave(List<Track> videos, List<Track> mixes) {
+    const firstAt = 3;
+    const secondAt = 12;
+    final pending = mixes.take(3).toList();
+    final rows = <_ResultRow>[];
+    for (var i = 0; i < videos.length; i++) {
+      if (pending.isNotEmpty && i == firstAt) {
+        rows.add(_ResultRow.mix(pending.removeAt(0)));
+      }
+      if (pending.isNotEmpty && i == secondAt) {
+        rows.add(_ResultRow.mix(pending.removeAt(0)));
+      }
+      rows.add(_ResultRow.video(videos[i]));
+    }
+    while (pending.isNotEmpty) {
+      rows.add(_ResultRow.mix(pending.removeAt(0)));
+    }
+    return rows;
+  }
+
+  Future<void> _playMix(BuildContext context, WidgetRef ref, Track mix) async {
     final l10n = ref.read(l10nProvider);
     final messenger = ScaffoldMessenger.of(context);
     final controller = ref.read(playerControllerProvider.notifier);
@@ -473,148 +476,133 @@ class _ResultsView extends ConsumerWidget {
 }
 
 /// Kartu radio YouTube Music, ditata di bawah daftar video.
-class _MixSection extends StatelessWidget {
-  const _MixSection({required this.mixes, required this.onPlay});
+class _ResultRow {
+  const _ResultRow._({this.video, this.mix});
 
-  final List<Track> mixes;
+  factory _ResultRow.video(Track t) => _ResultRow._(video: t);
+
+  factory _ResultRow.mix(Track t) => _ResultRow._(mix: t);
+
+  final Track? video;
+  final Track? mix;
+}
+
+/// Kartu mix full-width: artwork 16:9, badge di pojok, judul & artis di bawah.
+class _MixCard extends StatelessWidget {
+  const _MixCard({required this.mix, required this.onPlay});
+
+  final Track mix;
   final ValueChanged<Track> onPlay;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = ProviderScope.containerOf(context).read(l10nProvider);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            child: Text(
-              l10n.mixBadge,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          for (final mix in mixes)
-            InkWell(
-              onTap: () => onPlay(mix),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 44),
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    _MixThumb(mix: mix),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+    final artist = mix.artist.isNotEmpty
+        ? mix.artist
+        : (mix.uploader.isNotEmpty ? mix.uploader : l10n.mixSubtitle);
+    return InkWell(
+      onTap: () => onPlay(mix),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _MixArt(mix: mix),
+                  Positioned(
+                    left: 8,
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.86),
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
+                        border: Border.all(color: scheme.outlineVariant),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            mix.title.isEmpty
-                                ? l10n.mixUntitled
-                                : mix.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Icon(
+                            Icons.graphic_eq_rounded,
+                            size: 14,
+                            color: scheme.onSurface,
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(width: 4),
                           Text(
-                            l10n.mixSubtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            l10n.mixBadge,
                             style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(AppRadius.xs),
-                        border: Border.all(color: scheme.outlineVariant),
-                      ),
-                      child: Icon(
-                        Icons.graphic_eq_rounded,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              mix.title.isEmpty ? l10n.mixUntitled : mix.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _MixThumb extends StatelessWidget {
-  const _MixThumb({required this.mix});
+class _MixArt extends StatelessWidget {
+  const _MixArt({required this.mix});
 
   final Track mix;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final fallback = Container(
+      color: scheme.surfaceContainerHigh,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.graphic_eq_rounded,
+        size: 28,
+        color: scheme.onSurfaceVariant,
+      ),
+    );
     if (mix.thumb.isEmpty) {
-      return Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Icon(
-          Icons.graphic_eq_rounded,
-          size: 22,
-          color: scheme.onSurfaceVariant,
-        ),
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: fallback,
       );
     }
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: CachedNetworkImage(
         imageUrl: mix.thumb,
-        width: 56,
-        height: 56,
         fit: BoxFit.cover,
-        placeholder: (_, _) => Container(
-          width: 56,
-          height: 56,
-          color: scheme.surfaceContainerHighest,
-        ),
-        errorWidget: (_, _, _) => Container(
-          width: 56,
-          height: 56,
-          color: scheme.surfaceContainerHighest,
-          child: Icon(
-            Icons.graphic_eq_rounded,
-            size: 22,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
+        placeholder: (_, _) => fallback,
+        errorWidget: (_, _, _) => fallback,
       ),
     );
   }
