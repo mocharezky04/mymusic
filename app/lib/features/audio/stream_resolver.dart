@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
@@ -133,7 +135,13 @@ Future<String?> _tryClients(
 /// satu lagu butuh 26,7 detik = 10s visionos + 10s ios + 3s jeda + 3,7s retry.
 /// Timeout panjang justru memperpanjang, bukan memperbaiki. Backend yang
 /// cache-hit membalas dalam ~1,5 detik, jadi lokal dan backend dijalankan
-/// bersamaan dan yang pertama selesai menang. Batas global 12 detik.
+/// bersamaan dan yang pertama selesai menang. Batas global 14 detik.
+///
+/// Perhatian: `Future.any` TIDAK boleh dipakai di sini. Semantiknya selesai
+/// pada event pertama APA PUN, termasuk error, sehingga satu cabang yang gagal
+/// duluan (mis. backend 502) langsung mematikan seluruh resolve padahal cabang
+/// lain masih berjalan dan akan menang beberapa detik kemudian. Ganti dengan
+/// menunggu tiap cabang selesai secara individual.
 Future<String> resolveStreamUrl(
   String videoId, {
   String quality = '128k',
@@ -153,35 +161,70 @@ Future<String> resolveStreamUrl(
   // latensi total: mana pun yang selesai duluan yang menang.
   final localTimeout = const Duration(seconds: 12);
 
-  Future<String?> localAttempt() =>
-      _fromLocal(
+  // Cabang lokal & backend: masing-masing mengembalikan String? tempat null
+  // berarti "gagal". Error di-catch per cabang sehingga satu cabang gagal tidak
+  // membatalkan yang lain. Pemenang diputuskan oleh Completer yang mengembalikan
+  // URL pertama yang non-null; cabang yang kalah dibiarkan selesai sendiri.
+  final completer = Completer<String>();
+  var settled = false;
+
+  Future<String?> runLocal() async {
+    try {
+      final url = await _fromLocal(
         videoId,
         probe: probe,
         manifestTimeout: localTimeout,
         retryOnce: false,
       );
-
-  Future<String?> backendAttempt() => _fromBackend(videoId, quality: quality);
-
-  final winner = await Future.any<String?>([
-    localAttempt().then((v) => v == null ? null : 'L$v'),
-    backendAttempt().then((v) => v == null ? null : 'B$v'),
-    Future<String?>.delayed(globalCap),
-  ]);
-
-  if (winner != null) {
-    final url = winner.substring(1);
-    final via = winner[0] == 'L' ? 'local' : 'backend';
-    debugPrint(
-      'stream: resolve total ${DateTime.now().millisecondsSinceEpoch - t0}ms '
-      '($via menang)',
-    );
-    return url;
+      if (!settled) {
+        settled = true;
+        debugPrint(
+          'stream: lokal menang ${DateTime.now().millisecondsSinceEpoch - t0}ms',
+        );
+        completer.complete(url);
+      }
+      return url;
+    } catch (e) {
+      debugPrint(
+        'stream: lokal gagal ${DateTime.now().millisecondsSinceEpoch - t0}ms: '
+        '${e.runtimeType}',
+      );
+      return null;
+    }
   }
+
+  Future<String?> runBackend() async {
+    try {
+      final url = await _fromBackend(videoId, quality: quality);
+      if (!settled) {
+        settled = true;
+        debugPrint(
+          'stream: backend menang ${DateTime.now().millisecondsSinceEpoch - t0}ms',
+        );
+        completer.complete(url);
+      }
+      return url;
+    } catch (e) {
+      debugPrint(
+        'stream: backend gagal ${DateTime.now().millisecondsSinceEpoch - t0}ms: '
+        '${e.runtimeType}',
+      );
+      return null;
+    }
+  }
+
+  unawaited(runLocal());
+  unawaited(runBackend());
+
+  final winner = await completer.future.timeout(
+    globalCap,
+    onTimeout: () => '',
+  );
+  if (winner.isNotEmpty) return winner;
 
   debugPrint(
     'stream: resolve gagal dalam ${DateTime.now().millisecondsSinceEpoch - t0}ms '
-    '(lokal + backend tidak menjawab dalam ${globalCap.inSeconds} dtk)',
+    '(lokal + backend gagal dalam ${globalCap.inSeconds} dtk)',
   );
   throw Exception('stream unavailable');
 }

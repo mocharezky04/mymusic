@@ -142,7 +142,20 @@ class PlayerController extends Notifier<PlayerState> {
   int _localPlaySeq = 0;
   int _lastRecordedIndex = -1;
   bool _applying = false;
-  final Set<String> _failedVideos = {};
+  // Id video yang sempat gagal resolve, beserta kapan gagalnya. TTL 60 dtk:
+  // tap ulang setelah itu harus mencoba resolve penuh lagi, bukan error instan.
+  static const _failedTtl = Duration(seconds: 60);
+  final Map<String, int> _failedVideos = {};
+
+  bool _isFailedRecently(String id) {
+    final at = _failedVideos[id];
+    if (at == null) return false;
+    if (DateTime.now().millisecondsSinceEpoch - at < _failedTtl.inMilliseconds) {
+      return true;
+    }
+    _failedVideos.remove(id);
+    return false;
+  }
 
   // Ukur latency tekan-lagu -> bunyi. Dipakai sebagai log, tidak mengubah
   // perilaku playback. Segmen (iii) hanya dihitung setelah loadQueue dipanggil,
@@ -321,7 +334,7 @@ class PlayerController extends Notifier<PlayerState> {
   }) async {
     final cached = _srcCache[track.id];
     if (cached != null) return cached;
-    if (_failedVideos.contains(track.id)) {
+    if (_isFailedRecently(track.id)) {
       throw Exception('previously failed');
     }
     final download =
@@ -340,7 +353,7 @@ class PlayerController extends Notifier<PlayerState> {
       return url;
     } catch (e) {
       if (noRetry) {
-        _failedVideos.add(track.id);
+        _failedVideos[track.id] = DateTime.now().millisecondsSinceEpoch;
         rethrow;
       }
       debugPrint('stream: resolve failed for ${track.title}, retrying in 2s: $e');
@@ -354,7 +367,7 @@ class PlayerController extends Notifier<PlayerState> {
         _srcCache[track.id] = url;
         return url;
       } catch (e2) {
-        _failedVideos.add(track.id);
+        _failedVideos[track.id] = DateTime.now().millisecondsSinceEpoch;
         rethrow;
       }
     }
@@ -393,6 +406,11 @@ class PlayerController extends Notifier<PlayerState> {
       } catch (e) {
         debugPrint('stream: failed to resolve start track: $e');
         // Rollback: kembalikan antrian & lagu yang sebelumnya masih bunyi.
+        // Persist ulang supaya DB tidak menyimpan antrian yang gagal.
+        debugPrint(
+          'rollback: queue ${prevQueue.length}->${state.queue.length}, '
+          'index ${state.index}->$prevIndex, audio ${state.playing ? "bunyi" : "diam"}',
+        );
         state = state.copyWith(
           queue: prevQueue,
           index: prevIndex,
@@ -400,6 +418,11 @@ class PlayerController extends Notifier<PlayerState> {
           playing: wasPlaying,
           error: l10n.trackLoadFailed(startTrack.title),
         );
+        debugPrint(
+          'rollback done: queue=${state.queue.length}, index=${state.index}, '
+          'playing=${state.playing}',
+        );
+        _persistQueue();
         _perfLoadAtMs = null;
         unawaited(_ensurePrefetch());
         return false;
