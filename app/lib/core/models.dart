@@ -29,6 +29,7 @@ class Track {
     this.thumb = '',
     this.uploader = '',
     this.url = '',
+    this.kind = 'video',
   });
 
   final String id;
@@ -40,6 +41,12 @@ class Track {
   final String uploader;
   final String url;
 
+  /// "video" bisa diputar, "mix" adalah radio YouTube Music. Nilai lain
+  /// (album, channel) tidak dikirim backend.
+  final String kind;
+
+  bool get isPlayable => source.playable && kind == 'video';
+
   factory Track.fromJson(Map<String, dynamic> json) => Track(
         id: json['id'] as String? ?? '',
         source: TrackSource.fromApi(json['source'] as String? ?? ''),
@@ -49,6 +56,7 @@ class Track {
         thumb: json['thumb'] as String? ?? '',
         uploader: json['uploader'] as String? ?? '',
         url: json['url'] as String? ?? '',
+        kind: json['kind'] as String? ?? 'video',
       );
 
   String get durationLabel {

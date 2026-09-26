@@ -56,6 +56,32 @@ class MyMusicApi {
     return results.map((e) => Track.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Saran pencarian. Gagal atau timeout dibalas daftar kosong, bukan error,
+  /// supaya ketikan di kolom cari tidak menampilkan what's wrong.
+  Future<List<String>> suggest(String query) async {
+    try {
+      final res = await _dio.get(
+        '/suggest',
+        queryParameters: {'q': query},
+        options: Options(
+          connectTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+        ),
+      );
+      final data = res.data as Map<String, dynamic>;
+      final list = data['suggestions'] as List<dynamic>? ?? const [];
+      return list.whereType<String>().where((s) => s.isNotEmpty).toList();
+    } on DioException catch (e) {
+      if (e.response != null) {
+        debugPrint('api: HTTP ${e.response?.statusCode} /suggest');
+      }
+      return const [];
+    } catch (e) {
+      debugPrint('suggest gagal: $e');
+      return const [];
+    }
+  }
+
   Future<StreamInfo> streamInfo(String id, {String quality = '128k'}) async {
     final res = await _dio.get('/stream', queryParameters: {'video_id': id, 'quality': quality});
     return StreamInfo.fromJson(res.data as Map<String, dynamic>);

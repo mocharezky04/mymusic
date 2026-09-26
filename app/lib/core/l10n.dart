@@ -73,6 +73,13 @@ class L10n {
   );
   String get searchNoResults => _t('No results', 'Tidak ada hasil');
   String get searchStartHere => _t('Start here', 'Mulai dari sini');
+  String get searchHistoryLabel => _t('Search history', 'Riwayat pencarian');
+  String get searchSuggestionsLabel => _t('Suggestions', 'Saran');
+  String get useThisQuery => _t('Use this search', 'Pakai pencarian ini');
+  String mixLabel(String artist) => _t('Mix • $artist', 'Mix • $artist');
+  String get mixLoadFailed =>
+      _t('Could not load this mix', 'Gagal memuat mix ini');
+  String get mixBadge => _t('Mix', 'Mix');
   String get searchPlanLabel => _t('Search history', 'Riwayat pencarian');
   String get searchClear => _t('Clear', 'Bersihkan');
   String searchResults(int count) => _t('$count results', '$count hasil');
