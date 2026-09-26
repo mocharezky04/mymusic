@@ -21,6 +21,47 @@ async def search_youtube(query: str, limit: int) -> list[Track]:
     return tracks
 
 
+MIX_ID_PREFIXES = ("RD", "RDLM")
+_ALBUM_ID_PREFIXES = ("OLAK", "MPRE")
+_CHANNEL_ID_PREFIXES = ("UC",)
+
+
+def classify_entry(entry: dict) -> tuple[str, str] | None:
+    """Petakan entri flat yt-dlp menjadi (kind, id) atau None kalau tidak
+    bisa dipakai app. yt-dlp music.youtube.com mengembalikan video biasa
+    (v...), radio (RD...), album (OLAK...) dan channel (UC...)."""
+    raw = entry.get("ie_key") or ""
+    video_id = str(entry.get("id") or "").strip()
+    if not video_id:
+        return None
+
+    is_playlist_type = "playlist" in str(raw)
+    title = str(entry.get("title") or "")
+
+    if video_id.startswith(MIX_ID_PREFIXES):
+        return "mix", video_id
+    if is_playlist_type and "mix" in title.lower():
+        return "mix", video_id
+    if video_id.startswith(_ALBUM_ID_PREFIXES):
+        return "album", video_id
+    if video_id.startswith(_CHANNEL_ID_PREFIXES):
+        return "channel", video_id
+    if is_playlist_type:
+        return "album", video_id
+    return "video", video_id
+
+
+def _first_thumb(entry: dict) -> str:
+    thumbs = entry.get("thumbnails") or []
+    if not thumbs:
+        return ""
+    best = max(
+        thumbs,
+        key=lambda t: (t.get("preference") or 0, t.get("width") or 0),
+    )
+    return best.get("url") or ""
+
+
 async def search_ytmusic(query: str, limit: int) -> list[Track]:
     data = await _extract_info(
         f"https://music.youtube.com/search?q={quote(query)}",
@@ -28,20 +69,29 @@ async def search_ytmusic(query: str, limit: int) -> list[Track]:
     )
     tracks = []
     for entry in data.get("entries") or []:
-        video_id = entry.get("id")
-        if not video_id or not str(video_id).startswith(("v", "PL")):
+        classified = classify_entry(entry)
+        if classified is None:
             continue
-        thumbs = entry.get("thumbnails") or []
+        kind, video_id = classified
+        if kind not in ("video", "mix"):
+            # Album & channel tidak bisa diputar sebagai satu lagu; buang
+            # diam-diam supaya tidak memenuhi hasil.
+            continue
         tracks.append(
             Track(
                 id=video_id,
                 source="ytmusic",
+                kind=kind,
                 title=entry.get("title") or "",
                 artist=(entry.get("artist") or entry.get("uploader") or ""),
                 uploader=entry.get("uploader") or "",
                 duration=int(entry.get("duration") or 0),
-                thumb=thumbs[-1].get("url", "") if thumbs else "",
-                url=f"https://music.youtube.com/watch?v={video_id}",
+                thumb=_first_thumb(entry),
+                url=(
+                    f"https://music.youtube.com/watch?v={video_id}"
+                    if kind == "video"
+                    else f"https://music.youtube.com/playlist?list={video_id}"
+                ),
             )
         )
     return tracks
@@ -160,4 +210,13 @@ async def search_all(query: str, sources: list[str], limit: int) -> list[Track]:
             return []
 
     groups = await asyncio.gather(*(safe(src) for src in sources))
-    return [track for group in groups for track in group]
+    merged: list[Track] = []
+    seen: set[tuple[str, str]] = set()
+    for group in groups:
+        for track in group:
+            key = (track.kind, track.id)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(track)
+    return merged

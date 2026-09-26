@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
 
     stream_cache_ttl: int = 6 * 60 * 60
-    search_limit: int = 10
+    search_limit: int = 20
 
     redis_url: str | None = None
     ytdlp_cache_dir: str = tempfile.gettempdir()
