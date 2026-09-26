@@ -8,11 +8,12 @@ import '../playlist/playlist_screen.dart';
 import '../player/mini_player.dart';
 import '../search/search_screen.dart';
 import '../../core/l10n.dart';
+import '../../core/theme.dart';
 
 enum AppTab {
-  forYou(Icons.auto_awesome_rounded),
-  search(Icons.search_rounded),
-  playlist(Icons.playlist_play_rounded);
+  forYou(Icons.home_outlined),
+  search(Icons.search_outlined),
+  playlist(Icons.library_music_outlined);
 
   const AppTab(this.icon);
 
@@ -26,7 +27,9 @@ enum AppTab {
   String title(L10n l10n) => label(l10n);
 }
 
-final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   static const _key = 'themeMode';
@@ -76,15 +79,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          tab.title(l10n),
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
+        title: Text(tab.title(l10n)),
         actions: [
           IconButton(
             icon: const Icon(Icons.translate_rounded),
@@ -176,27 +171,28 @@ class _PillNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: Container(
-        height: 54,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          children: [
-            for (var i = 0; i < AppTab.values.length; i++)
-              Expanded(
-                child: _NavItem(
-                  icon: AppTab.values[i].icon,
-                  label: AppTab.values[i].label(l10n),
-                  selected: selected == i,
-                  onTap: () => onSelected(i),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: [
+              for (var i = 0; i < AppTab.values.length; i++)
+                Expanded(
+                  child: _NavItem(
+                    icon: AppTab.values[i].icon,
+                    label: AppTab.values[i].label(l10n),
+                    selected: selected == i,
+                    onTap: () => onSelected(i),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -219,31 +215,34 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? scheme.primary : Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+    final color = selected ? scheme.onSurface : scheme.onSurfaceVariant;
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            height: 3,
+            width: selected ? 20 : 0,
+            decoration: BoxDecoration(
+              color: scheme.onSurface,
+              borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Icon(icon, size: 22, color: color),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: color,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

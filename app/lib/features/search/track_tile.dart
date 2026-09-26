@@ -32,7 +32,7 @@ class TrackArtwork extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
         ),
         child: Icon(
-          Icons.music_note,
+          Icons.music_note_outlined,
           size: size * 0.5,
           color: scheme.onSurfaceVariant,
         ),
@@ -50,7 +50,7 @@ class TrackArtwork extends StatelessWidget {
           height: size,
           color: scheme.surfaceContainerHighest,
           child: Icon(
-            Icons.music_note,
+            Icons.music_note_outlined,
             size: size * 0.5,
             color: scheme.onSurfaceVariant,
           ),
@@ -60,7 +60,7 @@ class TrackArtwork extends StatelessWidget {
           height: size,
           color: scheme.surfaceContainerHighest,
           child: Icon(
-            Icons.music_note,
+            Icons.music_note_outlined,
             size: size * 0.5,
             color: scheme.onSurfaceVariant,
           ),
@@ -95,19 +95,18 @@ class TrackTile extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
-        color: isCurrent
-            ? scheme.primary.withValues(alpha: 0.08)
-            : scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        color: isCurrent ? scheme.surfaceContainerHigh : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: isCurrent ? Border.all(color: scheme.outlineVariant) : null,
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             children: [
-              TrackArtwork(track: track),
+              TrackArtwork(track: track, radius: AppRadius.sm),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -122,10 +121,10 @@ class TrackTile extends ConsumerWidget {
                         fontWeight: isCurrent
                             ? FontWeight.w700
                             : FontWeight.w500,
-                        color: isCurrent ? scheme.primary : scheme.onSurface,
+                        color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       track.artist.isEmpty ? track.uploader : track.artist,
                       maxLines: 1,
@@ -155,7 +154,7 @@ class TrackTile extends ConsumerWidget {
               if (onAdd != null)
                 IconButton(
                   onPressed: onAdd,
-                  icon: const Icon(Icons.queue_music, size: 20),
+                  icon: const Icon(Icons.queue_music_outlined, size: 20),
                   tooltip: l10n.addToQueueShort,
                 ),
               if (trailing != null) ...[const SizedBox(width: 4), trailing!],

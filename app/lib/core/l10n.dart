@@ -73,9 +73,9 @@ class L10n {
   );
   String get searchNoResults => _t('No results', 'Tidak ada hasil');
   String get searchStartHere => _t('Start here', 'Mulai dari sini');
-  String get searchPlanLabel => _t('SEARCH HISTORY', 'RIWAYAT PENCARIAN');
+  String get searchPlanLabel => _t('Search history', 'Riwayat pencarian');
   String get searchClear => _t('Clear', 'Bersihkan');
-  String searchResults(int count) => _t('RESULTS · $count', 'HASIL · $count');
+  String searchResults(int count) => _t('$count results', '$count hasil');
   String get playAll => _t('Play all', 'Putar semua');
   String get moreActions => _t('More actions', 'Aksi lain');
   String get playNow => _t('Play now', 'Putar sekarang');
@@ -152,7 +152,7 @@ class L10n {
       _t('$count songs · continue', '$count lagu · lanjutkan');
   String get recommendedForYou =>
       _t('Recommended for you', 'Direkomendasikan untukmu');
-  String get accountsLabel => _t('YOUTUBE ACCOUNTS', 'AKUN YOUTUBE');
+  String get accountsLabel => _t('YouTube accounts', 'Akun YouTube');
   String get playlistsUnavailable => _t(
     'Playlists could not be loaded right now.',
     'Playlist tidak bisa dimuat saat ini.',

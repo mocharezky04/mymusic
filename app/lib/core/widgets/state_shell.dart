@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme.dart';
+
 class StateMessage extends StatelessWidget {
   const StateMessage({
     super.key,
@@ -24,19 +26,20 @@ class StateMessage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
+                color: scheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: scheme.outlineVariant),
               ),
-              child: Icon(icon, size: 34, color: scheme.primary),
+              child: Icon(icon, size: 30, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 18),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 6),
@@ -80,18 +83,18 @@ class StateLoading extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 34,
-              height: 34,
+              width: 30,
+              height: 30,
               child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: scheme.primary,
+                strokeWidth: 2,
+                color: scheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 6),

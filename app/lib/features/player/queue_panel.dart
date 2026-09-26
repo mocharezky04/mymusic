@@ -50,13 +50,13 @@ class QueuePanel extends ConsumerWidget {
         decoration: BoxDecoration(
           color: scheme.surface,
           borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.xl),
+            top: Radius.circular(AppRadius.lg),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.30),
-              blurRadius: 24,
-              offset: const Offset(0, -6),
+              color: Colors.black.withValues(alpha: 0.24),
+              blurRadius: 16,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
@@ -71,7 +71,7 @@ class QueuePanel extends ConsumerWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
                 ),
               ),
               Padding(
@@ -89,8 +89,7 @@ class QueuePanel extends ConsumerWidget {
                         l10n.queue,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -155,11 +154,10 @@ class QueuePanel extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
                           child: Text(
-                            l10n.nowPlaying.toUpperCase(),
+                            l10n.nowPlaying,
                             style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
@@ -181,30 +179,31 @@ class QueuePanel extends ConsumerWidget {
                         child: Row(
                           children: [
                             Text(
-                              l10n.upNextShort.toUpperCase(),
+                              l10n.upNextShort,
                               style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.2,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                                 color: scheme.onSurfaceVariant,
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
+                                horizontal: 6,
+                                vertical: 1,
                               ),
                               decoration: BoxDecoration(
-                                color: scheme.primary.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(99),
+                                color: scheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.xs,
+                                ),
                               ),
                               child: Text(
                                 '${upcoming.length}',
                                 style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.primary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.onSurfaceVariant,
                                 ),
                               ),
                             ),
@@ -363,13 +362,13 @@ class _DismissibleQueueItem extends ConsumerWidget {
       background: _swipeBg(
         context,
         align: Alignment.centerLeft,
-        color: AppColors.pinkCoral,
+        color: AppColors.danger,
         icon: Icons.remove_rounded,
       ),
       secondaryBackground: _swipeBg(
         context,
         align: Alignment.centerRight,
-        color: AppColors.pinkCoral,
+        color: AppColors.danger,
         icon: Icons.remove_rounded,
       ),
       child: Container(

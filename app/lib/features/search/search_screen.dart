@@ -54,7 +54,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             onSubmitted: _runNow,
             decoration: InputDecoration(
               hintText: l10n.searchHint,
-              prefixIcon: const Icon(Icons.search_rounded, size: 22),
+              prefixIcon: const Icon(Icons.search_outlined, size: 22),
               suffixIcon: _controller.text.isEmpty
                   ? null
                   : IconButton(
@@ -100,8 +100,8 @@ class _ResultsView extends ConsumerWidget {
         final cause = _errorCause(err, l10n);
         return StateMessage(
           icon: cause == l10n.serverUnreachable
-              ? Icons.wifi_off_rounded
-              : Icons.cloud_off_rounded,
+              ? Icons.wifi_off_outlined
+              : Icons.cloud_off_outlined,
           title: l10n.searchFailed,
           subtitle: cause,
           action: cause == l10n.appBuildRejected
@@ -118,7 +118,7 @@ class _ResultsView extends ConsumerWidget {
       data: (tracks) {
         if (tracks.isEmpty) {
           return StateMessage(
-            icon: Icons.music_off_rounded,
+            icon: Icons.music_off_outlined,
             title: l10n.searchNoResults,
             subtitle: l10n.searchRetry,
           );
@@ -195,9 +195,8 @@ class _HistoryView extends ConsumerWidget {
               Text(
                 l10n.searchPlanLabel,
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -251,9 +250,8 @@ class _ResultsHeader extends StatelessWidget {
           Text(
             l10n.searchResults(count),
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
               color: scheme.onSurfaceVariant,
             ),
           ),

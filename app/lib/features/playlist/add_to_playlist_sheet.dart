@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n.dart';
 import '../../core/models.dart';
+import '../../core/theme.dart';
 import '../storage/app_db.dart';
 import 'playlist_providers.dart';
 
@@ -65,7 +66,7 @@ class _PickPlaylistSheet extends ConsumerWidget {
             height: 4,
             decoration: BoxDecoration(
               color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
           ),
           Padding(

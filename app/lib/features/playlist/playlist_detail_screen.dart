@@ -54,7 +54,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
         data: (list) {
           if (list.isEmpty) {
             return StateMessage(
-              icon: Icons.music_off_rounded,
+              icon: Icons.music_off_outlined,
               title: l10n.noSongsTitle,
               subtitle: l10n.noSongsSubtitle,
             );
@@ -67,11 +67,10 @@ class PlaylistDetailScreen extends ConsumerWidget {
                 child: Row(
                   children: [
                     Text(
-                      l10n.trackCount(list.length).toUpperCase(),
+                      l10n.trackCount(list.length),
                       style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const Spacer(),

@@ -1,22 +1,39 @@
 import 'package:flutter/material.dart';
 
+/// Palet diturunkan dari ikon aplikasi: line-art putih di atas near-black
+/// (#0B0D12). Tidak ada hue selain merah error yang fungsional.
 abstract final class AppColors {
-  static const ink = Color(0xFF0A0A12);
-  static const inkSoft = Color(0xFF14141F);
-  static const violet = Color(0xFF7C5CFF);
-  static const violetBright = Color(0xFF9D7BFF);
-  static const cyan = Color(0xFF22D3EE);
-  static const pinkCoral = Color(0xFFFF5C8A);
-  static const paper = Color(0xFFF4F7FD);
-  static const muted = Color(0xFF9A94C4);
+  static const ink = Color(0xFF0B0D12);
+  static const inkDeepest = Color(0xFF07080C);
+  static const surfaceLow = Color(0xFF12141A);
+  static const surface = Color(0xFF181A21);
+  static const surfaceHigh = Color(0xFF1F222A);
+  static const surfaceHighest = Color(0xFF272B34);
+
+  static const text = Color(0xFFF4F5F7);
+  static const textMuted = Color(0xFF9EA3AE);
+  static const line = Color(0xFF5A6069);
+  static const lineSoft = Color(0xFF2A2E37);
+
+  static const danger = Color(0xFFE2685F);
+
+  static const paper = Color(0xFFF7F8FA);
+  static const paperCard = Color(0xFFFFFFFF);
+  static const paperLow = Color(0xFFEFF1F4);
+  static const paperSurface = Color(0xFFE7EAEE);
+  static const paperHigh = Color(0xFFDEE2E7);
+  static const paperHighest = Color(0xFFD3D8DE);
+  static const inkText = Color(0xFF14161A);
+  static const inkTextMuted = Color(0xFF5A6069);
+  static const paperLine = Color(0xFF8A9099);
+  static const dangerDark = Color(0xFFA8322B);
 }
 
 abstract final class AppRadius {
-  static const sm = 8.0;
-  static const md = 14.0;
-  static const lg = 20.0;
-  static const xl = 28.0;
-  static const pill = 999.0;
+  static const xs = 2.0;
+  static const sm = 4.0;
+  static const md = 8.0;
+  static const lg = 12.0;
 }
 
 abstract final class AppSpace {
@@ -29,49 +46,50 @@ abstract final class AppSpace {
 }
 
 abstract final class AppTheme {
-  static const _darkSecondary = Color(0xFF22D3EE);
-  static const _lightSecondary = Color(0xFF0E7490);
-
   static ThemeData get dark {
     final scheme = ColorScheme.dark(
-      primary: AppColors.violetBright,
-      onPrimary: const Color(0xFF0F0A1F),
-      primaryContainer: const Color(0xFF2A1F5C),
-      onPrimaryContainer: const Color(0xFFDCD2FF),
-      secondary: _darkSecondary,
-      onSecondary: const Color(0xFF06172B),
+      primary: AppColors.text,
+      onPrimary: AppColors.ink,
+      primaryContainer: AppColors.surfaceHigh,
+      onPrimaryContainer: AppColors.text,
+      secondary: AppColors.textMuted,
+      onSecondary: AppColors.ink,
       surface: AppColors.ink,
-      onSurface: const Color(0xFFF2F0FF),
-      surfaceContainerLowest: const Color(0xFF06060C),
-      surfaceContainerLow: const Color(0xFF0E0E18),
-      surfaceContainer: const Color(0xFF14141F),
-      surfaceContainerHigh: const Color(0xFF1C1C2A),
-      surfaceContainerHighest: AppColors.inkSoft,
-      onSurfaceVariant: AppColors.muted,
-      outline: const Color(0xFF6B6B85),
-      error: AppColors.pinkCoral,
+      onSurface: AppColors.text,
+      surfaceContainerLowest: AppColors.inkDeepest,
+      surfaceContainerLow: AppColors.surfaceLow,
+      surfaceContainer: AppColors.surface,
+      surfaceContainerHigh: AppColors.surfaceHigh,
+      surfaceContainerHighest: AppColors.surfaceHighest,
+      onSurfaceVariant: AppColors.textMuted,
+      outline: AppColors.line,
+      outlineVariant: AppColors.lineSoft,
+      error: AppColors.danger,
+      onError: AppColors.ink,
     );
     return _build(scheme);
   }
 
   static ThemeData get light {
     final scheme = ColorScheme.light(
-      primary: AppColors.violet,
+      primary: AppColors.inkText,
       onPrimary: Colors.white,
-      primaryContainer: const Color(0xFFE6DCFF),
-      onPrimaryContainer: const Color(0xFF1F1255),
-      secondary: _lightSecondary,
+      primaryContainer: AppColors.paperHigh,
+      onPrimaryContainer: AppColors.inkText,
+      secondary: AppColors.inkTextMuted,
       onSecondary: Colors.white,
       surface: AppColors.paper,
-      onSurface: const Color(0xFF14132B),
-      surfaceContainerLowest: const Color(0xFFFCFDFF),
-      surfaceContainerLow: const Color(0xFFF1EEFF),
-      surfaceContainer: const Color(0xFFE8E2FF),
-      surfaceContainerHigh: const Color(0xFFDFD7F8),
-      surfaceContainerHighest: const Color(0xFFD3C8F0),
-      onSurfaceVariant: const Color(0xFF575073),
-      outline: const Color(0xFF8C85A8),
-      error: const Color(0xFFB8324D),
+      onSurface: AppColors.inkText,
+      surfaceContainerLowest: AppColors.paperCard,
+      surfaceContainerLow: AppColors.paperLow,
+      surfaceContainer: AppColors.paperSurface,
+      surfaceContainerHigh: AppColors.paperHigh,
+      surfaceContainerHighest: AppColors.paperHighest,
+      onSurfaceVariant: AppColors.inkTextMuted,
+      outline: AppColors.paperLine,
+      outlineVariant: AppColors.paperHigh,
+      error: AppColors.dangerDark,
+      onError: Colors.white,
     );
     return _build(scheme);
   }
@@ -85,105 +103,147 @@ abstract final class AppTheme {
     );
     return base.copyWith(
       textTheme: base.textTheme.copyWith(
-        displaySmall: TextStyle(
-          fontSize: 26,
+        titleLarge: TextStyle(
+          fontSize: 20,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.4,
-          height: 1.15,
+          letterSpacing: -0.2,
           color: scheme.onSurface,
         ),
         titleMedium: TextStyle(
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.1,
           color: scheme.onSurface,
         ),
         bodyMedium: TextStyle(fontSize: 13.5, color: scheme.onSurface),
         bodySmall: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.1,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
           color: scheme.onSurfaceVariant,
         ),
-        labelMedium: TextStyle(
+        labelSmall: TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.1,
+          fontWeight: FontWeight.w500,
           color: scheme.onSurfaceVariant,
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: scheme.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         iconTheme: IconThemeData(color: scheme.onSurface),
-        foregroundColor: scheme.primary,
+        foregroundColor: scheme.onSurface,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+          color: scheme.onSurface,
+        ),
       ),
       drawerTheme: DrawerThemeData(backgroundColor: scheme.surface),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant,
+        thickness: 1,
+        space: 1,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        hintStyle: TextStyle(
-          color: scheme.onSurfaceVariant,
-          letterSpacing: 0.2,
-        ),
+        fillColor: scheme.surfaceContainer,
+        hintStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: BorderSide(color: scheme.primary, width: 1.4),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderSide: BorderSide(color: scheme.onSurface, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
+          horizontal: 12,
           vertical: 13,
         ),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surface,
-        indicatorColor: scheme.primary.withValues(alpha: 0.16),
-        height: 66,
-        labelTextStyle: WidgetStatePropertyAll(
-          TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      sliderTheme: SliderThemeData(
-        activeTrackColor: scheme.primary,
-        inactiveTrackColor: scheme.onSurface.withValues(alpha: 0.16),
-        thumbColor: scheme.primary,
-        overlayColor: scheme.primary.withValues(alpha: 0.12),
-        trackHeight: 3,
-        activeTickMarkColor: Colors.transparent,
-        inactiveTickMarkColor: Colors.transparent,
-      ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(color: scheme.primary),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 44),
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          side: BorderSide(color: scheme.outline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          foregroundColor: scheme.onSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: scheme.surface,
+        indicatorColor: scheme.surfaceContainerHigh,
+        height: 66,
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: AppColors.textMuted,
+        inactiveTrackColor: AppColors.lineSoft,
+        thumbColor: AppColors.text,
+        overlayColor: Color(0x1FFFFFFF),
+        trackHeight: 2,
+        activeTickMarkColor: Colors.transparent,
+        inactiveTickMarkColor: Colors.transparent,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.onSurfaceVariant,
       ),
       listTileTheme: ListTileThemeData(iconColor: scheme.onSurfaceVariant),
-      dividerTheme: DividerThemeData(
-        color: scheme.onSurface.withValues(alpha: 0.24),
-        thickness: 1,
-        space: 1,
-      ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: scheme.surfaceContainerHighest,
         contentTextStyle: TextStyle(color: scheme.onSurface),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.lg),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),

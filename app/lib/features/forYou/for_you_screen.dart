@@ -82,14 +82,13 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -146,7 +145,7 @@ class _SavedMixesSection extends ConsumerWidget {
                     Row(
                       children: [
                         Icon(
-                          Icons.queue_music_rounded,
+                          Icons.queue_music_outlined,
                           size: 24,
                           color: scheme.primary,
                         ),
@@ -308,7 +307,7 @@ class _BigCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
         color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +318,7 @@ class _BigCard extends StatelessWidget {
                   ? Container(
                       color: scheme.surfaceContainerHighest,
                       child: Icon(
-                        Icons.music_note,
+                        Icons.music_note_outlined,
                         size: 44,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -696,7 +695,7 @@ class _LoginCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(AppRadius.lg),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -812,7 +811,7 @@ class _PlaylistListTile extends ConsumerWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: playlist.thumb.isNotEmpty
             ? Image.network(
                 playlist.thumb,
@@ -1029,7 +1028,7 @@ class _RecommendMenu extends ConsumerWidget {
         _menuItem(
           scheme,
           'enqueue',
-          Icons.queue_music_rounded,
+          Icons.queue_music_outlined,
           l10n.addToQueue,
         ),
         _menuItem(

@@ -33,12 +33,12 @@ class MiniPlayer extends ConsumerWidget {
         : 0.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
       child: Material(
         color: scheme.surfaceContainerHigh,
-        elevation: 3,
-        shadowColor: Colors.black.withValues(alpha: 0.30),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         clipBehavior: Clip.antiAlias,
         child: _SwipeableMiniContent(
           onSwipeNext: () => ref.read(playerControllerProvider.notifier).next(),
@@ -58,19 +58,11 @@ class MiniPlayer extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.16),
-                    ),
+                    Container(color: scheme.outlineVariant),
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
                       widthFactor: progress,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.violetBright, AppColors.cyan],
-                          ),
-                        ),
-                      ),
+                      child: ColoredBox(color: scheme.onSurface),
                     ),
                   ],
                 ),
@@ -313,9 +305,8 @@ class _UpNextStrip extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                   color: scheme.onSurfaceVariant,
                 ),
               ),

@@ -62,7 +62,7 @@ class PlaylistScreen extends ConsumerWidget {
                 data: (playlists) {
                   if (playlists.isEmpty) {
                     return StateMessage(
-                      icon: Icons.queue_music_rounded,
+                      icon: Icons.queue_music_outlined,
                       title: l10n.emptyPlaylistsTitle,
                       subtitle: l10n.emptyPlaylistsSubtitle,
                     );
@@ -129,7 +129,7 @@ class _PlaylistTile extends ConsumerWidget {
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Icon(
-            Icons.playlist_play_rounded,
+            Icons.library_music_outlined,
             size: 26,
             color: scheme.primary,
           ),

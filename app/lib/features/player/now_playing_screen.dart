@@ -96,10 +96,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
                 : () => showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
-                    backgroundColor: scheme.surfaceContainerLow,
+                    backgroundColor: scheme.surface,
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(AppRadius.xl),
+                        top: Radius.circular(AppRadius.lg),
                       ),
                     ),
                     builder: (_) => LyricsSheet(track: track),
@@ -115,9 +115,9 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.music_off_rounded,
-                      size: 40,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      Icons.music_off_outlined,
+                      size: 36,
+                      color: scheme.onSurfaceVariant,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -414,32 +414,11 @@ class _GlowArtwork extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 300,
-          height: 300,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.violet.withValues(
-                  alpha: playing ? 0.40 : 0.20,
-                ),
-                blurRadius: 70,
-                spreadRadius: 4,
-              ),
-            ],
-          ),
-          child: Hero(
-            tag: 'artwork-${track.id}',
-            child: Material(
-              type: MaterialType.transparency,
-              child: TrackArtwork(
-                track: track,
-                size: 300,
-                radius: AppRadius.lg,
-              ),
-            ),
+        Hero(
+          tag: 'artwork-${track.id}',
+          child: Material(
+            type: MaterialType.transparency,
+            child: TrackArtwork(track: track, size: 300, radius: AppRadius.md),
           ),
         ),
       ],

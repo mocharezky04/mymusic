@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 
+/// Sumber sudah tercermin di teks label, jadi badge ini monokrom: warna tidak
+/// menambah informasi apa pun dan hanya memecah palet.
 class SourceBadge extends StatelessWidget {
   const SourceBadge({super.key, required this.source});
 
@@ -11,26 +13,19 @@ class SourceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = switch (source) {
-      TrackSource.youtube => const Color(0xFFE53935),
-      TrackSource.ytmusic => const Color(0xFF1DB954),
-      TrackSource.soundcloud => const Color(0xFFFF5500),
-      TrackSource.spotify => const Color(0xFF1DB954),
-    };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: color.withValues(alpha: 0.45), width: 0.8),
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Text(
         source.label,
         style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
-          color: scheme.onSurface,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: scheme.onSurfaceVariant,
         ),
       ),
     );
