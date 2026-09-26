@@ -521,7 +521,9 @@ class _MixSection extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            mix.title,
+                            mix.title.isEmpty
+                                ? l10n.mixUntitled
+                                : mix.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -531,9 +533,7 @@ class _MixSection extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            l10n.mixLabel(
-                              mix.artist.isEmpty ? mix.uploader : mix.artist,
-                            ),
+                            l10n.mixSubtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

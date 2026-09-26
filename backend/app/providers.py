@@ -21,33 +21,37 @@ async def search_youtube(query: str, limit: int) -> list[Track]:
     return tracks
 
 
-MIX_ID_PREFIXES = ("RD", "RDLM")
-_ALBUM_ID_PREFIXES = ("OLAK", "MPRE")
-_CHANNEL_ID_PREFIXES = ("UC",)
+# Diperiksa dari data production (2026-09): search music.youtube.com lewat
+# yt-dlp flat extract menghasilkan tiga bentuk id:
+#   - 11 karakter, awalan acak ("tEXYfT_G0W0", "MX7FSAnRPug") = video biasa
+#   - "VLPL..." (contoh VLPLPNKnwlz-OnZcgTuCwVCcqx-1BdW2xDm1) = radio/mix.
+#     Field title dari flat extract kosong untuk entri ini, jadi tidak bisa
+#     dibedakan dari album; /youtube/mix (extract_mix) menangani keduanya lewat
+#     playlist?list=, jadi VLPL diklasifikasikan "mix".
+#   - id lawas "RD...", "OLAK...", "UC..." kadang muncul tapi jarang di search
+MIX_ID_PREFIXES = ("VLPL", "RD", "RDLM")
+ALBUM_ID_PREFIXES = ("OLAK", "MPRE")
+CHANNEL_ID_PREFIXES = ("UC",)
 
 
 def classify_entry(entry: dict) -> tuple[str, str] | None:
     """Petakan entri flat yt-dlp menjadi (kind, id) atau None kalau tidak
-    bisa dipakai app. yt-dlp music.youtube.com mengembalikan video biasa
-    (v...), radio (RD...), album (OLAK...) dan channel (UC...)."""
-    raw = entry.get("ie_key") or ""
+    bisa dipakai app."""
     video_id = str(entry.get("id") or "").strip()
     if not video_id:
         return None
 
-    is_playlist_type = "playlist" in str(raw)
-    title = str(entry.get("title") or "")
+    raw = str(entry.get("ie_key") or "")
+    is_playlist = "playlist" in raw
 
     if video_id.startswith(MIX_ID_PREFIXES):
         return "mix", video_id
-    if is_playlist_type and "mix" in title.lower():
-        return "mix", video_id
-    if video_id.startswith(_ALBUM_ID_PREFIXES):
-        return "album", video_id
-    if video_id.startswith(_CHANNEL_ID_PREFIXES):
+    if video_id.startswith(CHANNEL_ID_PREFIXES):
         return "channel", video_id
-    if is_playlist_type:
+    if video_id.startswith(ALBUM_ID_PREFIXES):
         return "album", video_id
+    if is_playlist:
+        return "mix", video_id
     return "video", video_id
 
 

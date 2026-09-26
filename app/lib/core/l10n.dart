@@ -76,7 +76,12 @@ class L10n {
   String get searchHistoryLabel => _t('Search history', 'Riwayat pencarian');
   String get searchSuggestionsLabel => _t('Suggestions', 'Saran');
   String get useThisQuery => _t('Use this search', 'Pakai pencarian ini');
-  String mixLabel(String artist) => _t('Mix • $artist', 'Mix • $artist');
+  String get mixLabel => _t('Mix', 'Mix');
+  String get mixSubtitle => _t(
+    'Radio from YouTube Music',
+    'Radio dari YouTube Music',
+  );
+  String get mixUntitled => _t('YouTube Music mix', 'Mix YouTube Music');
   String get mixLoadFailed =>
       _t('Could not load this mix', 'Gagal memuat mix ini');
   String get mixBadge => _t('Mix', 'Mix');
