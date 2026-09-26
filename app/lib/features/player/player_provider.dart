@@ -311,29 +311,21 @@ class PlayerController extends Notifier<PlayerState> {
       _handler!.stop();
       _lastRecordedIndex = startIndex - 1;
       state = state.copyWith(queue: order, index: startIndex, loading: true, error: null);
-      final items = <(Track, String)>[(startTrack, startUrl)];
-      for (var i = 0; i < order.length; i++) {
-        if (i == startIndex) continue;
-        try {
-          final url = await _resolve(order[i]);
-          items.add((order[i], url));
-        } catch (e) {
-          debugPrint('stream: skipping track ${order[i].title} (resolve failed: $e)');
-        }
-      }
-      var adjustedStart = 0;
-      await _handler!.loadQueue(items, startIndex: adjustedStart, autoPlay: autoPlay);
+
+      await _handler!.loadQueue([(startTrack, startUrl)], startIndex: 0, autoPlay: autoPlay);
       state = state.copyWith(
-        queue: items.map((e) => e.$1).toList(),
-        index: adjustedStart,
+        queue: order,
+        index: 0,
         loading: false,
         position: Duration.zero,
-        duration: items[adjustedStart].$1.durationSeconds > 0
-            ? Duration(seconds: items[adjustedStart].$1.durationSeconds)
+        duration: startTrack.durationSeconds > 0
+            ? Duration(seconds: startTrack.durationSeconds)
             : Duration.zero,
         error: null,
       );
       _persistQueue();
+
+      unawaited(_prefetchRest(order, startIndex));
       return true;
     } on Exception {
       _handler!.stop();
@@ -341,6 +333,20 @@ class PlayerController extends Notifier<PlayerState> {
       return false;
     } finally {
       _applying = false;
+    }
+  }
+
+  Future<void> _prefetchRest(List<Track> order, int startIndex) async {
+    for (var i = 0; i < order.length; i++) {
+      if (i == startIndex) continue;
+      if (!_handler!.isQueueLoaded) return;
+      try {
+        final url = await _resolve(order[i]);
+        if (!_handler!.isQueueLoaded) return;
+        await _handler!.addLast(order[i], url);
+      } catch (e) {
+        debugPrint('stream: prefetch skip ${order[i].title}: $e');
+      }
     }
   }
 
