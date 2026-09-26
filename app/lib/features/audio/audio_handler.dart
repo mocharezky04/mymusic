@@ -19,7 +19,20 @@ MediaItem mediaItemForTrack(Track track, String url) => MediaItem(
 /// [AudioService.init] supaya playback tetap jalan saat layar mati.
 class AudioPlayerHandler extends BaseAudioHandler {
   AudioPlayerHandler() {
-    _player = AudioPlayer();
+    _player = AudioPlayer(
+      audioLoadConfiguration: const AudioLoadConfiguration(
+        androidLoadControl: AndroidLoadControl(
+          // Default ExoPlayer menunggu 2,5 detik audio ter-buffer sebelum
+          // mulai bunyi. Untuk lagu yang >>=20 detik itu terasa sebagai jeda
+          // hening, jadi turunkan ke 500ms. Buffer ke depan tetap dijaga
+          // minBuffer 15 detik supaya playback tidak mudah tersendat.
+          bufferForPlaybackDuration: Duration(milliseconds: 500),
+          bufferForPlaybackAfterRebufferDuration: Duration(milliseconds: 1500),
+          minBufferDuration: Duration(seconds: 15),
+          maxBufferDuration: Duration(seconds: 60),
+        ),
+      ),
+    );
     _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
     _player.sequenceStateStream
         .map((sequence) => sequence.currentSource?.tag as MediaItem?)

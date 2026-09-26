@@ -16,6 +16,7 @@ class SearchController extends AsyncNotifier<List<Track>> {
 
   Future<void> run(String query) async {
     final q = query.trim();
+    debugPrint('search: jalan query="$q"');
     if (q.isEmpty) {
       state = const AsyncValue.data([]);
       return;
@@ -24,11 +25,12 @@ class SearchController extends AsyncNotifier<List<Track>> {
     try {
       final results = await ref.read(apiProvider).search(q);
       state = AsyncValue.data(results);
+      debugPrint('search: "$q" -> ${results.length} hasil');
       if (results.isNotEmpty) {
         ref.read(historyProvider.notifier).add(q);
       }
     } catch (err, st) {
-      debugPrint('search: "$q" failed: $err');
+      debugPrint('search: "$q" GAGAL: ${err.runtimeType}: $err');
       debugPrintStack(stackTrace: st, maxFrames: 2);
       state = AsyncValue.error(err, st);
     }

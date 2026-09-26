@@ -144,6 +144,16 @@ class PlayerController extends Notifier<PlayerState> {
   bool _applying = false;
   final Set<String> _failedVideos = {};
 
+  // Ukur latency tekan-lagu -> bunyi. Dipakai sebagai log, tidak mengubah
+  // perilaku playback. Segmen (iii) hanya dihitung setelah loadQueue dipanggil,
+  // supaya event ready dari player lama tidak ikut terhitung.
+  int? _perfLoadAtMs;
+  String _perfLabel = '';
+  String _perfExpectId = '';
+  bool _perfPlayingLogged = false;
+
+  static int _nowMs() => DateTime.now().millisecondsSinceEpoch;
+
   // Pesan error dibuat dalam bahasa aktif saat error terjadi, lalu disimpan
   // sebagai teks siap tampil supaya SnackBar tidak perlu tahu asal-usulnya.
   L10n get l10n => ref.read(l10nProvider);
@@ -205,6 +215,28 @@ class PlayerController extends Notifier<PlayerState> {
   }
 
   void _applyPlayback(PlaybackState ps) {
+    final loadAt = _perfLoadAtMs;
+    if (loadAt != null && !_perfPlayingLogged) {
+      final st = ps.processingState;
+      if (st == AudioProcessingState.ready) {
+        final isExpected =
+            state.hasTrack &&
+            state.index == 0 &&
+            state.current!.id == _perfExpectId;
+        if (isExpected) {
+          _perfPlayingLogged = true;
+          debugPrint(
+            'perf: loadQueue->PLAYING ${_nowMs() - loadAt}ms "$_perfLabel"',
+          );
+          _perfLoadAtMs = null;
+        } else {
+          debugPrint(
+            'perf: abaikan ready "${state.current?.title}" '
+            '(diharapkan "$_perfLabel")',
+          );
+        }
+      }
+    }
     final idx = ps.queueIndex;
     final index = (idx != null && idx >= 0 && idx < state.queue.length)
         ? idx
@@ -282,7 +314,11 @@ class PlayerController extends Notifier<PlayerState> {
     }
   }
 
-  Future<String> _resolve(Track track, {bool noRetry = false}) async {
+  Future<String> _resolve(
+    Track track, {
+    bool noRetry = false,
+    bool isStartTrack = false,
+  }) async {
     final cached = _srcCache[track.id];
     if (cached != null) return cached;
     if (_failedVideos.contains(track.id)) {
@@ -291,8 +327,15 @@ class PlayerController extends Notifier<PlayerState> {
     final download =
         await ref.read(dbProvider).downloadFor(track.id, track.source.apiValue);
     if (download != null) return 'file://${download.filePath}';
+    // Lagu yang langsung berbunyi tidak perlu probe URL: probe menambah satu
+    // round-trip dan URL rusak tetap muncul sebagai error playback.
+    final probe = !isStartTrack;
     try {
-      final url = await resolveStreamUrl(track.id);
+      final url = await resolveStreamUrl(
+        track.id,
+        probe: probe,
+        isStartTrack: isStartTrack,
+      );
       _srcCache[track.id] = url;
       return url;
     } catch (e) {
@@ -303,7 +346,11 @@ class PlayerController extends Notifier<PlayerState> {
       debugPrint('stream: resolve failed for ${track.title}, retrying in 2s: $e');
       await Future<void>.delayed(const Duration(seconds: 2));
       try {
-        final url = await resolveStreamUrl(track.id);
+        final url = await resolveStreamUrl(
+          track.id,
+          probe: probe,
+          isStartTrack: isStartTrack,
+        );
         _srcCache[track.id] = url;
         return url;
       } catch (e2) {
@@ -315,36 +362,65 @@ class PlayerController extends Notifier<PlayerState> {
 
   Future<bool> _applyQueue(List<Track> order, {required int startIndex, required bool autoPlay}) async {
     if (order.isEmpty) return false;
-    if (_applying) return false;
-    _applying = true;
+    // Tap kedua sebelum tap pertama selesai menggantikan yang pertama, bukan
+    // diabaikan. Ini yang membuat tap cepat "mati" pada versi lama.
+    if (_applying) _queueGen++;
     final gen = ++_queueGen;
+    _applying = true;
     try {
       // Lagu awal diputar dari posisi 0 supaya handler (prefix) dan state
       // memakai indeks yang sama tanpa harus memutar ulang handler.
       final rotated = rotateQueue(order, startIndex);
       final startTrack = rotated.first;
+      final t0 = _nowMs();
+      _perfLoadAtMs = null;
+      _perfLabel = startTrack.title;
+      _perfExpectId = startTrack.id;
+      _perfPlayingLogged = false;
+
+      // State di-update di sini, sebelum resolve apa pun, supaya mini
+      // player langsung berubah dan indikator loading langsung tampil. Lagu
+      // yang sedang bunyi tidak disentuh di sini.
+      final wasPlaying = state.playing;
+      final prevQueue = state.queue;
+      final prevIndex = state.index;
+      state = state.copyWith(queue: rotated, index: 0, loading: true, error: null);
+      _persistQueue();
+
       final String startUrl;
       try {
-        startUrl = await _resolve(startTrack, noRetry: true);
+        startUrl = await _resolve(startTrack, noRetry: true, isStartTrack: true);
       } catch (e) {
         debugPrint('stream: failed to resolve start track: $e');
-        state = state.copyWith(error: l10n.trackLoadFailed(startTrack.title));
+        // Rollback: kembalikan antrian & lagu yang sebelumnya masih bunyi.
+        state = state.copyWith(
+          queue: prevQueue,
+          index: prevIndex,
+          loading: false,
+          playing: wasPlaying,
+          error: l10n.trackLoadFailed(startTrack.title),
+        );
+        _perfLoadAtMs = null;
         unawaited(_ensurePrefetch());
         return false;
       }
+      if (gen != _queueGen) {
+        debugPrint('stream: resolve dibatalkan, tap lebih baru menang');
+        return false;
+      }
+      final t1 = _nowMs();
+      debugPrint('perf: tap->resolve done ${t1 - t0}ms "$_perfLabel"');
+
+      // Audio lama baru dimatikan di sini, sedekat mungkin dengan loadQueue,
+      // supaya tidak ada jeda hening di tengah.
       _handler!.stop();
       _lastRecordedIndex = -1;
-      state = state.copyWith(queue: rotated, index: 0, loading: true, error: null);
 
       final items = <(Track, String)>[(startTrack, startUrl)];
-      if (rotated.length > 1) {
-        try {
-          items.add((rotated[1], await _resolve(rotated[1])));
-        } catch (e) {
-          debugPrint('stream: next track unavailable: $e');
-        }
-      }
+      _perfLoadAtMs = _nowMs();
       await _handler!.loadQueue(items, startIndex: 0, autoPlay: autoPlay);
+      final t2 = _nowMs();
+      debugPrint('perf: resolve->loadQueue done ${t2 - t1}ms');
       if (gen != _queueGen) return false;
       final loaded = items[0].$1;
       state = state.copyWith(
@@ -357,6 +433,7 @@ class PlayerController extends Notifier<PlayerState> {
         error: null,
       );
       _persistQueue();
+      // Lagu kedua dan sisanya diisi di belakang, tidak memblokir bunyi.
       unawaited(_prefetch(gen));
       return true;
     } on Exception {
@@ -369,7 +446,7 @@ class PlayerController extends Notifier<PlayerState> {
       unawaited(_ensurePrefetch());
       return false;
     } finally {
-      _applying = false;
+      if (gen == _queueGen) _applying = false;
     }
   }
 
@@ -470,7 +547,7 @@ class PlayerController extends Notifier<PlayerState> {
     state = state.copyWith(queue: [...state.queue, track]);
     _persistQueue();
     // Lagu baru masuk antrian setelah yang sudah dimuat, lalu prefetch
-    // melanjutkan sendiri. Handler tidak pernah增添了 di posisi yang salah.
+    // melanjutkan sendiri. Handler tidak pernah holding lagu di posisi yang salah.
     if (_handler!.isQueueLoaded && _handler!.queueLength == state.queue.length - 1) {
       try {
         final url = await _resolve(track);
