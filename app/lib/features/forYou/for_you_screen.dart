@@ -28,11 +28,18 @@ class ForYouScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
           child: Row(
             children: [
-              _Label(l10n.forYou),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  l10n.greetingBack,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
               AccountAvatar(l10n: l10n),
             ],
           ),
@@ -49,10 +56,8 @@ class ForYouScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [
-                _Label(l10n.recommendedForYou),
                 const _RecommendedSection(),
                 const SizedBox(height: 20),
-                _Label(l10n.recentlyPlayed),
                 const ForYouRows(),
                 const SizedBox(height: 20),
                 _Label(l10n.accountsLabel),
@@ -229,18 +234,15 @@ class ForYouRows extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (top.isNotEmpty) ...[
-          _CardTitle(l10n.topPlayed),
+        if (top.isNotEmpty)
           _BigCard(
             title: l10n.topPlayed,
             subtitle: l10n.topSubtitle(top.length),
             thumb: top.first.thumb,
             onPlay: () => controller.playFrom(top, 0),
           ),
-        ],
         if (recent.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _CardTitle(l10n.recentlyPlayedTitle),
+          const SizedBox(height: 12),
           _BigCard(
             title: l10n.recentlyPlayedTitle,
             subtitle: l10n.recentSubtitle(recent.length),
@@ -728,21 +730,34 @@ class _PlaylistSection extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
     return playlists.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (err, _) => Padding(
-        padding: const EdgeInsets.all(20),
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$err', style: TextStyle(fontSize: 13, color: scheme.error)),
+            const LinearProgressIndicator(minHeight: 2),
+            const SizedBox(height: 10),
+            Text(
+              l10n.loadPlaylistHint,
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.loadPlaylistsFailed,
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 6),
             TextButton.icon(
               onPressed: () => ref.invalidate(playlistsProvider(account.email)),
               icon: const Icon(Icons.refresh, size: 16),
-              label: Text(l10n.tryAgain),
+              label: Text(l10n.tryAgain, style: const TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -901,7 +916,10 @@ class _RecommendedSection extends ConsumerWidget {
               TextButton.icon(
                 onPressed: () => ref.invalidate(recommendationProvider),
                 icon: const Icon(Icons.refresh, size: 16),
-                label: Text(l10n.tryAgain, style: const TextStyle(fontSize: 12)),
+                label: Text(
+                  l10n.tryAgain,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
           ],
         ),

@@ -43,7 +43,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
         error: (err, _) => StateMessage(
           icon: Icons.error_outline_rounded,
           title: l10n.loadPlaylistsFailed,
-          subtitle: '$err',
+          subtitle: l10n.loadPlaylistHint,
           action: TextButton.icon(
             onPressed: () =>
                 ref.invalidate(playlistTracksProvider(playlist.id)),

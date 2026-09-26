@@ -137,7 +137,7 @@ class _PickPlaylistSheet extends ConsumerWidget {
               error: (err, _) => Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  l10n.loadPlaylistError('$err'),
+                  l10n.playlistsUnavailable,
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: scheme.error),
                 ),

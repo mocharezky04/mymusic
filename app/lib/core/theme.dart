@@ -163,6 +163,17 @@ abstract final class AppTheme {
         inactiveTickMarkColor: Colors.transparent,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: scheme.primary),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+      ),
       listTileTheme: ListTileThemeData(iconColor: scheme.onSurfaceVariant),
       dividerTheme: DividerThemeData(
         color: scheme.onSurface.withValues(alpha: 0.24),

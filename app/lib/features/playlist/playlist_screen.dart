@@ -21,17 +21,18 @@ class PlaylistScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+          padding: const EdgeInsets.fromLTRB(20, 8, 16, 4),
           child: Row(
             children: [
-              Text(
-                l10n.playlist,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  l10n.playlistSubtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-              const Spacer(),
               FilledButton.icon(
                 onPressed: () => _create(context, ref),
                 icon: const Icon(Icons.add_rounded, size: 18),
@@ -51,7 +52,7 @@ class PlaylistScreen extends ConsumerWidget {
                 error: (err, _) => StateMessage(
                   icon: Icons.error_outline_rounded,
                   title: l10n.loadPlaylistsFailed,
-                  subtitle: '$err',
+                  subtitle: l10n.loadPlaylistHint,
                   action: TextButton.icon(
                     onPressed: () => ref.invalidate(playlistsProvider),
                     icon: const Icon(Icons.refresh, size: 18),
@@ -64,11 +65,6 @@ class PlaylistScreen extends ConsumerWidget {
                       icon: Icons.queue_music_rounded,
                       title: l10n.emptyPlaylistsTitle,
                       subtitle: l10n.emptyPlaylistsSubtitle,
-                      action: FilledButton.icon(
-                        onPressed: () => _create(context, ref),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: Text(l10n.newPlaylist),
-                      ),
                     );
                   }
                   return ListView.separated(

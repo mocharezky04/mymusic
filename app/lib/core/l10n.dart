@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final languageProvider = NotifierProvider<LanguageNotifier, String>(LanguageNotifier.new);
+final languageProvider = NotifierProvider<LanguageNotifier, String>(
+  LanguageNotifier.new,
+);
 
 class LanguageNotifier extends Notifier<String> {
   static const _key = 'locale';
@@ -36,6 +38,8 @@ class L10n {
 
   // Tabs & home
   String get forYou => _t('For You', 'Untukmu');
+  String get greetingBack =>
+      _t('Pick up where you left off', 'Lanjutkan dari tempat kamu berhenti');
   String get recentlyPlayed => _t('Recently played', 'Baru diputar');
   String get search => _t('Search', 'Cari');
   String get queue => _t('Queue', 'Antrian');
@@ -44,10 +48,7 @@ class L10n {
   String get changeLanguage => _t('Language', 'Ganti bahasa');
 
   // Search
-  String get searchHint => _t(
-    'Search songs, artists…',
-    'Cari lagu, artis…',
-  );
+  String get searchHint => _t('Search songs, artists…', 'Cari lagu, artis…');
   String get searchFailed => _t('Search failed', 'Gagal mencari');
   String get searchLoading => _t('Searching…', 'Mencari…');
   String get searchRetry => _t(
@@ -112,18 +113,12 @@ class L10n {
       _t('Failed to load playback queue', 'Gagal memuat antrian audio');
   String get sourceNotPlayable =>
       _t('This source cannot be played yet', 'Sumber ini belum bisa diputar');
-  String trackLoadFailed(String title) => _t(
-    'Could not load "$title"',
-    'Gagal memuat "$title"',
-  );
-  String get queueLoadFailed => _t(
-    'Could not load the queue',
-    'Gagal memuat antrian',
-  );
-  String get trackNotPlayable => _t(
-    'This source cannot be played yet',
-    'Sumber ini belum bisa diputar',
-  );
+  String trackLoadFailed(String title) =>
+      _t('Could not load "$title"', 'Gagal memuat "$title"');
+  String get queueLoadFailed =>
+      _t('Could not load the queue', 'Gagal memuat antrian');
+  String get trackNotPlayable =>
+      _t('This source cannot be played yet', 'Sumber ini belum bisa diputar');
   String get downloadSavedForOffline =>
       _t('saved for offline', 'tersimpan untuk offline');
   String get downloadFailed => _t('Download failed', 'Unduhan gagal');
@@ -158,6 +153,10 @@ class L10n {
   String get recommendedForYou =>
       _t('Recommended for you', 'Direkomendasikan untukmu');
   String get accountsLabel => _t('YOUTUBE ACCOUNTS', 'AKUN YOUTUBE');
+  String get playlistsUnavailable => _t(
+    'Playlists could not be loaded right now.',
+    'Playlist tidak bisa dimuat saat ini.',
+  );
   String get noPlaylists => _t('No playlists', 'Tidak ada playlist');
   String get noAccounts => _t('No YouTube accounts', 'Belum ada akun YouTube');
   String get addAccount => _t('Add account', 'Tambah akun');
@@ -183,8 +182,6 @@ class L10n {
     'Lihat dan putar playlist serta video yang disukai dari akunmu.',
   );
   String get login => _t('Login', 'Login');
-  String loadPlaylistError(String err) =>
-      _t('Failed to load playlists: $err', 'Gagal memuat playlist: $err');
   String get noPlaylistsForAccount => _t(
     'No playlists could be loaded from this account.',
     'Tidak ada playlist yang bisa dimuat dari akun ini.',
@@ -252,9 +249,11 @@ class L10n {
   String get emptyPlaylistsTitle =>
       _t('No playlists yet', 'Belum ada playlist');
   String get emptyPlaylistsSubtitle => _t(
-    'Build your own playlists that live on this device.',
-    'Buat playlist sendiri yang tersimpan di perangkat ini.',
+    'Build your own playlists that live on this device. Use "New playlist" above to start.',
+    'Buat playlist sendiri yang tersimpan di perangkat ini. Tekan "Playlist baru" di atas untuk mulai.',
   );
+  String get playlistSubtitle =>
+      _t('Stored on this device', 'Tersimpan di perangkat ini');
   String get newPlaylist => _t('New playlist', 'Playlist baru');
   String get playlistName => _t('Playlist name', 'Nama playlist');
   String get playlistNameHint => _t('e.g. Road trip', 'mis. Perjalanan');
