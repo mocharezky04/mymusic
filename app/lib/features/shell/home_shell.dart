@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../forYou/for_you_screen.dart';
 import '../forYou/recommendation_provider.dart';
@@ -25,7 +26,30 @@ enum AppTab {
   String title(L10n l10n) => label(l10n);
 }
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  static const _key = 'themeMode';
+
+  @override
+  ThemeMode build() {
+    _load();
+    return ThemeMode.dark;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
+    if (saved == 'light') state = ThemeMode.light;
+  }
+
+  Future<void> toggle() async {
+    final next = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    state = next;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, next == ThemeMode.dark ? 'dark' : 'light');
+  }
+}
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
@@ -65,12 +89,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           IconButton(
             icon: const Icon(Icons.translate_rounded),
             tooltip: l10n.changeLanguage,
-            onPressed: () {
-              final current = ref.read(languageProvider);
-              ref.read(languageProvider.notifier).state = current == 'en'
-                  ? 'id'
-                  : 'en';
-            },
+            onPressed: () => ref.read(languageProvider.notifier).toggle(),
           ),
           IconButton(
             icon: Icon(
@@ -79,11 +98,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   : Icons.dark_mode_rounded,
             ),
             tooltip: l10n.changeTheme,
-            onPressed: () {
-              final current = ref.read(themeModeProvider);
-              ref.read(themeModeProvider.notifier).state =
-                  current == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-            },
+            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
           ),
           const SizedBox(width: 4),
         ],

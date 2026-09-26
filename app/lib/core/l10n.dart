@@ -1,6 +1,30 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-final languageProvider = StateProvider<String>((ref) => 'en');
+final languageProvider = NotifierProvider<LanguageNotifier, String>(LanguageNotifier.new);
+
+class LanguageNotifier extends Notifier<String> {
+  static const _key = 'locale';
+
+  @override
+  String build() {
+    _load();
+    return 'en';
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
+    if (saved != null && saved != state) state = saved;
+  }
+
+  Future<void> toggle() async {
+    final next = state == 'en' ? 'id' : 'en';
+    state = next;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, next);
+  }
+}
 
 class L10n {
   final String locale;
@@ -12,7 +36,7 @@ class L10n {
 
   // Tabs & home
   String get forYou => _t('For You', 'Untukmu');
-  String get recentlyPlayed => _t('Recently played', 'Baca cepat');
+  String get recentlyPlayed => _t('Recently played', 'Baru diputar');
   String get search => _t('Search', 'Cari');
   String get queue => _t('Queue', 'Antrian');
   String get playlist => _t('Playlist', 'Playlist');
@@ -21,8 +45,8 @@ class L10n {
 
   // Search
   String get searchHint => _t(
-    'Search songs, artists, or materials…',
-    'Cari lagu, artis, atau materi…',
+    'Search songs, artists…',
+    'Cari lagu, artis…',
   );
   String get searchFailed => _t('Search failed', 'Gagal mencari');
   String get searchLoading => _t('Searching…', 'Mencari…');
@@ -31,12 +55,12 @@ class L10n {
     'Coba kata kunci lain atau ubah sumber pencarian.',
   );
   String get searchEmpty => _t(
-    'Type above to search. Your search plan will appear here.',
-    'Ketik di atas untuk mencari. Rencana pencarianmu akan muncul di sini.',
+    'Type to search. Recent searches appear here.',
+    'Ketik untuk mencari. Pencarian terbaru muncul di sini.',
   );
   String get searchNoResults => _t('No results', 'Tidak ada hasil');
   String get searchStartHere => _t('Start here', 'Mulai dari sini');
-  String get searchPlanLabel => _t('YOUR PLAN', 'RENCANA INI');
+  String get searchPlanLabel => _t('SEARCH HISTORY', 'RIWAYAT PENCARIAN');
   String get searchClear => _t('Clear', 'Bersihkan');
   String searchResults(int count) => _t('RESULTS · $count', 'HASIL · $count');
   String get playAll => _t('Play all', 'Putar semua');
@@ -86,7 +110,7 @@ class L10n {
   // Repeat
   String get repeatAll => _t('Repeat all', 'Ulang semua');
   String get repeatOne => _t('Repeat one', 'Ulang satu');
-  String get repeatOff => _t('Repeat off', 'Ulang mati');
+  String get repeatOff => _t('No repeat', 'Tanpa ulang');
 
   // Lyrics
   String lyricsTitle(String title) => _t('Lyrics: $title', 'Lirik: $title');
