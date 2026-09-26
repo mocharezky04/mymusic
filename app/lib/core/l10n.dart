@@ -100,6 +100,18 @@ class L10n {
       _t('Failed to load playback queue', 'Gagal memuat antrian audio');
   String get sourceNotPlayable =>
       _t('This source cannot be played yet', 'Sumber ini belum bisa diputar');
+  String trackLoadFailed(String title) => _t(
+    'Could not load "$title"',
+    'Gagal memuat "$title"',
+  );
+  String get queueLoadFailed => _t(
+    'Could not load the queue',
+    'Gagal memuat antrian',
+  );
+  String get trackNotPlayable => _t(
+    'This source cannot be played yet',
+    'Sumber ini belum bisa diputar',
+  );
   String get downloadSavedForOffline =>
       _t('saved for offline', 'tersimpan untuk offline');
   String get downloadFailed => _t('Download failed', 'Unduhan gagal');
@@ -223,14 +235,6 @@ class L10n {
   // Account linking
   String accountLinked(String email) =>
       _t('Account linked: $email', 'Akun tersambung: $email');
-
-  // Player errors (displayed in UI layer)
-  String get playbackError =>
-      _t('A playback error occurred', 'Terjadi kesalahan pemutaran');
-  String get failedToLoadQueue =>
-      _t('Failed to load playback queue', 'Gagal memuat antrian audio');
-  String get sourceNotPlayableYet =>
-      _t('This source cannot be played yet', 'Sumber ini belum bisa diputar');
 
   // Local playlists (offline)
   String get emptyPlaylistsTitle =>
