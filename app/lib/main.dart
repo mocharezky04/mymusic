@@ -175,7 +175,6 @@ class _MyMusicAppState extends ConsumerState<MyMusicApp> with WidgetsBindingObse
     });
 
     final app = MaterialApp(
-      key: ValueKey(themeMode),
       scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'MyMusic',
       debugShowCheckedModeBanner: false,
