@@ -161,10 +161,43 @@ Behance membalas 403. Dua sumber berikut benar-benar diakses dan dibaca:
    Mengutip Parhi, Karlson & Bederson 2006 (MobileHCI) dan Dandekar et al. 2003.
    - **Diterima:** minimum 1cm × 1cm fisik; ujung jari rata-rata 1,6–2cm, area thumb 2,5cm.
      → ambang 44px dipertahankan.
-   - **Diterima:** target harus cukup besar **dan** cukup berjarak;Nicolson terjerat (crowding)
-     adalah sumber mistake. Ini yang motivates bottom nav redesigned: bar datar dengan hairline
-     + `SafeArea` bawah, bukan container melayang yang menempel gesture bar.
+   - **Diterima:** target harus cukup besar **dan** cukup berjarak; penumpukan (crowding)
+     adalah sumber mistake. Ini yang memotivasi bottom nav redesigned: bar datar dengan
+     hairline + `SafeArea` bawah, bukan container melayang yang menempel gesture bar.
    - **Diterima:** view-tap asymmetry dihindari dengan memberi target lebih besar dari labelnya.
+
+3. **Apple Human Interface Guidelines — "Tab bars"** (last updated 8 Juni 2026)
+   <https://developer.apple.com/design/human-interface-guidelines/tab-bars>
+   Diambil lewat endpoint JSON `…/tutorials/data/design/human-interface-guidelines/tab-bars.json`
+   karena halaman HTML-nya butuh JavaScript.
+   - **Diterima:** *"If your app already has bright, colorful content in the content layer, prefer a
+     monochromatic appearance for tab bars."* → album art di app ini penuh warna, jadi chrome
+     (nav, mini player, sheet) wajib monokrom. Ini justifikasi utama identitas baru.
+   - **Diterima:** *"Include tab labels to help with navigation"* dan *"Use single words whenever
+     possible."* → label nav tetap satu kata: "For You", "Search", "Playlist".
+   - **Diterima:** *"Use a tab bar to support navigation, not to provide actions."* → nav tidak
+     boleh dipakai memegang tombol aksi; aksinya di dalam layar.
+   - **Diterima:** *"Avoid applying a similar color to tab labels and content layer backgrounds."*
+     → label nav memakai `onSurface` (terang) dan `onSurfaceVariant` (redup) di atas
+     `surfaceContainerHigh`, jaraknya jauh dari ambang 3:1.
+   - **Diterima:** *"Don't disable or hide tab bar buttons, even when their content is unavailable.
+     If a section is empty, explain why its content is unavailable."* → empty state wajib punya
+     penjelasan, tombol nav tidak pernah disembunyikan.
+   - **Catatan kehati-hatian:** dokumen HIG ini **tidak** memuat tinggi tab bar iOS maupun ukuran
+     ikon/label dalam pt, dan tidak membahas bentuk indikator tab aktif di iOS (hanya tvOS).
+     Karena itu angka 44px di dokumen ini **tidak** berasal dari HIG, melainkan dari aturan 1cm
+     milik NN/G di atas. Bentuk indikator aktif (blok tonal radius 4) adalah keputusan sendiri,
+     bukan hasil sitasi.
+
+### Catatan tentang alat riset
+
+9router REST API **tidak punya model web-search** (`/v1/models/web` mengembalikan daftar kosong,
+meski `NINEROUTER_KEY` sudah tersedia). 66 model chat tersedia; dipakai sebagai cross-check
+sekunder, tetapi URL yang dihasilkan model tersebut sebagian besar tidak dapat diverifikasi
+(403/404, dan beberapaslug bearslangka acak yang menyerupai URL karangan). Karena itu
+**hanya tiga sumber di atas yang dikutip** di dokumen ini, dan ketiganya saya akses dan baca
+sendiri. Angka dari cross-check model tidak dipakai sebagai acuan.
+
 
 Pola yang diterapkan dari pengamatan umum app musik ( Spotify / Apple Music / YouTube Music /
 Tidal ) yang konsisten di semua sumber:
