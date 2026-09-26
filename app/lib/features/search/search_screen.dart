@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,29 +19,16 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
-  Timer? _debounce;
   String _query = '';
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _controller.dispose();
     _focus.dispose();
     super.dispose();
   }
 
-  void _onChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 450), () {
-      if (value != _query) {
-        _query = value;
-        ref.read(searchControllerProvider.notifier).run(value);
-      }
-    });
-  }
-
   void _runNow(String value) {
-    _debounce?.cancel();
     _query = value;
     _controller.text = value;
     _controller.selection = TextSelection.collapsed(offset: value.length);
@@ -65,7 +50,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             controller: _controller,
             focusNode: _focus,
             textInputAction: TextInputAction.search,
-            onChanged: _onChanged,
             onSubmitted: _runNow,
             decoration: InputDecoration(
               hintText: l10n.searchHint,
