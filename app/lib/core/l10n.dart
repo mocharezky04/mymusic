@@ -218,6 +218,10 @@ class L10n {
   );
   String get dynamicFromYoutube =>
       _t('Dynamic from YouTube', 'Dinamis dari YouTube');
+  String get mixNotPlayableYet => _t(
+    'Saving only for now. Playing is not ready yet.',
+    'Baru disimpan. Memutar belum tersedia.',
+  );
   String trackCount(int count) => _t('$count songs', '$count lagu');
 
   // Recommendations error

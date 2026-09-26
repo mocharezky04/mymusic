@@ -133,72 +133,56 @@ class _SavedMixesSection extends ConsumerWidget {
             separatorBuilder: (_, ix) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               final m = mixes[i];
-              return GestureDetector(
-                onTap: () {
-                  // TODO: fetch mix tracks and play
-                },
-                onLongPress: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(l10n.deleteMixTitle),
-                      content: Text(l10n.deleteMixConfirm(m.title)),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(l10n.cancel),
+              return Container(
+                width: 112,
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.queue_music_rounded,
+                          size: 24,
+                          color: scheme.primary,
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: Text(l10n.delete),
+                        const Spacer(),
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _remove(context, ref, db, m),
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                            tooltip: l10n.delete,
+                          ),
                         ),
                       ],
                     ),
-                  );
-                  if (confirmed == true) {
-                    await db.removeMix(m.mixId);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.mixRemoved(m.title))),
-                      );
-                    }
-                  }
-                },
-                child: Container(
-                  width: 100,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.queue_music_rounded,
-                        size: 28,
-                        color: scheme.primary,
+                    const Spacer(),
+                    Text(
+                      m.title.isNotEmpty ? m.title : m.mixId,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const Spacer(),
-                      Text(
-                        m.title.isNotEmpty ? m.title : m.mixId,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.mixNotPlayableYet,
+                      maxLines: 2,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.dynamicFromYoutube,
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -206,6 +190,38 @@ class _SavedMixesSection extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    AppDatabase db,
+    SavedMixRow mix,
+  ) async {
+    final l10n = ref.read(l10nProvider);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteMixTitle),
+        content: Text(l10n.deleteMixConfirm(mix.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await db.removeMix(mix.mixId);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.mixRemoved(mix.title))));
+    }
   }
 }
 
