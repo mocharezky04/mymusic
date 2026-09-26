@@ -51,7 +51,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     ref.read(searchControllerProvider.notifier).run(value);
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final results = ref.watch(searchControllerProvider);
     final l10n = ref.watch(l10nProvider);
@@ -103,11 +103,19 @@ class _ResultsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(l10nProvider);
     return results.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () =>
+          StateLoading(title: l10n.searchLoading, subtitle: l10n.searchRetry),
       error: (err, _) => StateMessage(
         icon: Icons.cloud_off_rounded,
         title: l10n.searchFailed,
-        subtitle: '$err',
+        subtitle: l10n.searchRetry,
+        action: TextButton.icon(
+          onPressed: () {
+            ref.read(searchControllerProvider.notifier).run(query);
+          },
+          icon: const Icon(Icons.refresh, size: 18),
+          label: Text(l10n.tryAgain),
+        ),
       ),
       data: (tracks) {
         if (tracks.isEmpty) {
@@ -145,7 +153,11 @@ class _ResultsView extends ConsumerWidget {
                     isCurrent: isCurrent,
                     isPlaying: playing,
                     onTap: () => controller.playFrom([track], 0),
-                    trailing: _ResultMenu(l10n: l10n, track: track, controller: controller),
+                    trailing: _ResultMenu(
+                      l10n: l10n,
+                      track: track,
+                      controller: controller,
+                    ),
                   );
                 },
               ),
@@ -182,7 +194,15 @@ class _HistoryView extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l10n.searchPlanLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1, color: scheme.onSurfaceVariant)),
+              Text(
+                l10n.searchPlanLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
               TextButton(
                 onPressed: () => ref.read(historyProvider.notifier).clear(),
                 child: Text(l10n.searchClear),
@@ -193,11 +213,17 @@ class _HistoryView extends ConsumerWidget {
         for (final item in history)
           ListTile(
             dense: true,
-            leading: Icon(Icons.history_rounded, size: 20, color: scheme.onSurfaceVariant),
+            leading: Icon(
+              Icons.history_rounded,
+              size: 20,
+              color: scheme.onSurfaceVariant,
+            ),
             title: Text(item, style: const TextStyle(fontSize: 14)),
             trailing: IconButton(
               icon: const Icon(Icons.close_rounded, size: 18),
-              onPressed: () => ref.read(historyProvider.notifier).removeAt(history.indexOf(item)),
+              onPressed: () => ref
+                  .read(historyProvider.notifier)
+                  .removeAt(history.indexOf(item)),
             ),
             onTap: () => onPick(item),
           ),
@@ -207,7 +233,11 @@ class _HistoryView extends ConsumerWidget {
 }
 
 class _ResultsHeader extends StatelessWidget {
-  const _ResultsHeader({required this.l10n, required this.count, required this.onPlayAll});
+  const _ResultsHeader({
+    required this.l10n,
+    required this.count,
+    required this.onPlayAll,
+  });
 
   final L10n l10n;
   final int count;
@@ -232,7 +262,7 @@ class _ResultsHeader extends StatelessWidget {
           const Spacer(),
           TextButton.icon(
             onPressed: onPlayAll,
-            style: TextButton.styleFrom(foregroundColor: scheme.primary, visualDensity: VisualDensity.compact),
+            style: TextButton.styleFrom(foregroundColor: scheme.primary),
             icon: const Icon(Icons.play_circle_fill_rounded, size: 19),
             label: Text(l10n.playAll),
           ),
@@ -245,7 +275,11 @@ class _ResultsHeader extends StatelessWidget {
 enum _TrackAction { playNow, playNext, enqueue, playlist }
 
 class _ResultMenu extends StatelessWidget {
-  const _ResultMenu({required this.l10n, required this.track, required this.controller});
+  const _ResultMenu({
+    required this.l10n,
+    required this.track,
+    required this.controller,
+  });
 
   final L10n l10n;
   final Track track;
@@ -311,7 +345,11 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 19, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        Icon(
+          icon,
+          size: 19,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 12),
         Text(label, style: const TextStyle(fontSize: 14)),
       ],

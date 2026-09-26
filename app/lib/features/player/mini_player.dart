@@ -15,14 +15,19 @@ class MiniPlayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final track = ref.watch(playerControllerProvider.select((s) => s.current));
-    final playing = ref.watch(playerControllerProvider.select((s) => s.playing));
+    final playing = ref.watch(
+      playerControllerProvider.select((s) => s.playing),
+    );
     if (track == null) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
     final position = ref.watch(playerPositionProvider).value;
     final pos = position?.position ?? Duration.zero;
-    final dur = position?.duration ??
-        (track.durationSeconds > 0 ? Duration(seconds: track.durationSeconds) : Duration.zero);
+    final dur =
+        position?.duration ??
+        (track.durationSeconds > 0
+            ? Duration(seconds: track.durationSeconds)
+            : Duration.zero);
     final progress = dur.inMilliseconds > 0
         ? (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0)
         : 0.0;
@@ -31,8 +36,8 @@ class MiniPlayer extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       child: Material(
         color: scheme.surfaceContainerHigh,
-        elevation: 12,
-        shadowColor: AppColors.violet.withValues(alpha: 0.45),
+        elevation: 3,
+        shadowColor: Colors.black.withValues(alpha: 0.30),
         borderRadius: BorderRadius.circular(AppRadius.lg),
         clipBehavior: Clip.antiAlias,
         child: _SwipeableMiniContent(
@@ -53,7 +58,9 @@ class MiniPlayer extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(color: scheme.onSurfaceVariant.withValues(alpha: 0.16)),
+                    Container(
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.16),
+                    ),
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
                       widthFactor: progress,
@@ -73,15 +80,24 @@ class MiniPlayer extends ConsumerWidget {
                   Navigator.of(context).push(
                     PageRouteBuilder<void>(
                       transitionDuration: const Duration(milliseconds: 320),
-                      reverseTransitionDuration: const Duration(milliseconds: 240),
-                      pageBuilder: (_, _, _) => const NowPlayingScreen(),
-                      transitionsBuilder: (_, anim, _, child) => SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 1),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-                        child: child,
+                      reverseTransitionDuration: const Duration(
+                        milliseconds: 240,
                       ),
+                      pageBuilder: (_, _, _) => const NowPlayingScreen(),
+                      transitionsBuilder: (_, anim, _, child) =>
+                          SlideTransition(
+                            position:
+                                Tween<Offset>(
+                                  begin: const Offset(0, 1),
+                                  end: Offset.zero,
+                                ).animate(
+                                  CurvedAnimation(
+                                    parent: anim,
+                                    curve: Curves.easeOutCubic,
+                                  ),
+                                ),
+                            child: child,
+                          ),
                       fullscreenDialog: true,
                     ),
                   );
@@ -94,7 +110,11 @@ class MiniPlayer extends ConsumerWidget {
                         tag: 'artwork-${track.id}',
                         child: Material(
                           type: MaterialType.transparency,
-                          child: TrackArtwork(track: track, size: 42, radius: AppRadius.sm),
+                          child: TrackArtwork(
+                            track: track,
+                            size: 42,
+                            radius: AppRadius.sm,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -113,7 +133,9 @@ class MiniPlayer extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              track.artist.isEmpty ? track.uploader : track.artist,
+                              track.artist.isEmpty
+                                  ? track.uploader
+                                  : track.artist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -127,15 +149,21 @@ class MiniPlayer extends ConsumerWidget {
                       const SizedBox(width: 4),
                       EqBars(active: playing, height: 16, width: 18),
                       IconButton(
-                        onPressed: ref.read(playerControllerProvider.notifier).toggle,
+                        onPressed: ref
+                            .read(playerControllerProvider.notifier)
+                            .toggle,
                         icon: Icon(
-                          playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
                           size: 30,
                           color: scheme.primary,
                         ),
                       ),
                       IconButton(
-                        onPressed: ref.read(playerControllerProvider.notifier).next,
+                        onPressed: ref
+                            .read(playerControllerProvider.notifier)
+                            .next,
                         icon: const Icon(Icons.skip_next_rounded, size: 26),
                       ),
                     ],
@@ -209,13 +237,12 @@ class _SwipeableMiniContentState extends State<_SwipeableMiniContent>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()..translateByDouble(_dragDx, 0.0, 0.0, 1.0),
+        transform: Matrix4.identity()
+          ..translateByDouble(_dragDx, 0.0, 0.0, 1.0),
         child: Stack(
           children: [
             if (_active && _dragDx.abs() > 8)
-              Positioned.fill(
-                child: _SwipeHint(dx: _dragDx),
-              ),
+              Positioned.fill(child: _SwipeHint(dx: _dragDx)),
             widget.child,
           ],
         ),
@@ -233,15 +260,16 @@ class _SwipeHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final showPrev = dx > 0;
+    final accent = scheme.primary;
     return Container(
-      color: (showPrev ? scheme.primary : scheme.secondary).withValues(alpha: 0.12),
+      color: accent.withValues(alpha: 0.12),
       alignment: showPrev ? Alignment.centerLeft : Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Opacity(
         opacity: (dx.abs() / 100).clamp(0.0, 1.0),
         child: Icon(
           showPrev ? Icons.skip_previous_rounded : Icons.skip_next_rounded,
-          color: showPrev ? scheme.primary : scheme.secondary,
+          color: accent,
           size: 28,
         ),
       ),
@@ -271,12 +299,16 @@ class _UpNextStrip extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
         child: Row(
           children: [
-            Icon(Icons.queue_music_rounded, size: 14, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.queue_music_rounded,
+              size: 14,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 hasNext
-                    ? '${l10n.upNext} • ${next!.title} — ${next.artist.isEmpty ? next.uploader : next.artist}'
+                    ? '${l10n.upNext} • ${next!.title} • ${next.artist.isEmpty ? next.uploader : next.artist}'
                     : l10n.queueEmptyTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -288,7 +320,11 @@ class _UpNextStrip extends ConsumerWidget {
                 ),
               ),
             ),
-            Icon(Icons.expand_less_rounded, size: 18, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.expand_less_rounded,
+              size: 18,
+              color: scheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),

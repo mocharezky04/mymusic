@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api.dart';
 import '../../core/l10n.dart';
 import '../../core/models.dart';
+import '../../core/theme.dart';
+import '../../core/widgets/state_shell.dart';
 import '../player/player_provider.dart';
 import '../playlist/add_to_playlist_sheet.dart';
 import '../search/search_providers.dart' show apiProvider;
@@ -102,6 +104,12 @@ class _SavedMixesSection extends ConsumerWidget {
     return FutureBuilder<List<SavedMixRow>>(
       future: db.savedMixes(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: LinearProgressIndicator(minHeight: 2),
+          );
+        }
         final mixes = snapshot.data ?? [];
         if (mixes.isEmpty) {
           return Padding(
@@ -132,8 +140,14 @@ class _SavedMixesSection extends ConsumerWidget {
                       title: Text(l10n.deleteMixTitle),
                       content: Text(l10n.deleteMixConfirm(m.title)),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.delete)),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(l10n.cancel),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(l10n.delete),
+                        ),
                       ],
                     ),
                   );
@@ -150,24 +164,34 @@ class _SavedMixesSection extends ConsumerWidget {
                   width: 100,
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.queue_music_rounded, size: 28, color: scheme.primary),
+                      Icon(
+                        Icons.queue_music_rounded,
+                        size: 28,
+                        color: scheme.primary,
+                      ),
                       const Spacer(),
                       Text(
                         m.title.isNotEmpty ? m.title : m.mixId,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         l10n.dynamicFromYoutube,
-                        style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant),
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -196,7 +220,10 @@ class ForYouRows extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Text(
           l10n.noHistory,
-          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -236,7 +263,10 @@ class _CardTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
-      child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
@@ -261,7 +291,7 @@ class _BigCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
         color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,9 +301,18 @@ class _BigCard extends StatelessWidget {
               child: thumb.isEmpty
                   ? Container(
                       color: scheme.surfaceContainerHighest,
-                      child: Icon(Icons.music_note, size: 44, color: scheme.onSurfaceVariant),
+                      child: Icon(
+                        Icons.music_note,
+                        size: 44,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     )
-                  : Image.network(thumb, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(color: scheme.surfaceContainerHighest)),
+                  : Image.network(
+                      thumb,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          Container(color: scheme.surfaceContainerHighest),
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -283,15 +322,30 @@ class _BigCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 3),
-                        Text(subtitle, style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   IconButton.filled(
                     onPressed: onPlay,
-                    icon: Icon(Icons.play_arrow_rounded, color: scheme.onPrimary),
+                    icon: Icon(
+                      Icons.play_arrow_rounded,
+                      color: scheme.onPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -313,9 +367,11 @@ class AccountAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(l10nProvider);
-    final accounts = ref.watch(accountsProvider).value ?? const <YoutubeAccount>[];
+    final accounts =
+        ref.watch(accountsProvider).value ?? const <YoutubeAccount>[];
     final active = ref.watch(activeAccountProvider);
-    final activeOrFirst = active ?? (accounts.isNotEmpty ? accounts.first : null);
+    final activeOrFirst =
+        active ?? (accounts.isNotEmpty ? accounts.first : null);
     return PopupMenuButton<_AccountMenu>(
       tooltip: l10n.noAccounts,
       onSelected: (menu) {
@@ -336,17 +392,20 @@ class AccountAvatar extends ConsumerWidget {
             child: Row(
               children: [
                 if (acc.email == activeOrFirst?.email)
-                  Icon(Icons.check_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 const SizedBox(width: 10),
-                Flexible(child: Text(acc.displayName, overflow: TextOverflow.ellipsis)),
+                Flexible(
+                  child: Text(acc.displayName, overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
           ),
         if (accounts.isNotEmpty) const PopupMenuDivider(),
-        PopupMenuItem(
-          value: _AccountMenu.add,
-          child: Text(l10n.addAccount),
-        ),
+        PopupMenuItem(value: _AccountMenu.add, child: Text(l10n.addAccount)),
         if (activeOrFirst != null)
           PopupMenuItem(
             value: _AccountMenu.disconnect,
@@ -362,17 +421,34 @@ class AccountAvatar extends ConsumerWidget {
 
   Widget _avatar(BuildContext context, YoutubeAccount? acc) {
     final scheme = Theme.of(context).colorScheme;
-    final String? url = (acc != null && acc.avatarUrl.isNotEmpty) ? acc.avatarUrl : null;
+    final String? url = (acc != null && acc.avatarUrl.isNotEmpty)
+        ? acc.avatarUrl
+        : null;
     final fallback = Container(
       width: 34,
       height: 34,
-      decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle),
-      child: Icon(Icons.person_rounded, size: 20, color: scheme.onSurfaceVariant),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.person_rounded,
+        size: 20,
+        color: scheme.onSurfaceVariant,
+      ),
     );
     return Stack(
       children: [
         if (url != null)
-          ClipOval(child: Image.network(url, width: 34, height: 34, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback))
+          ClipOval(
+            child: Image.network(
+              url,
+              width: 34,
+              height: 34,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            ),
+          )
         else
           fallback,
         Positioned(
@@ -398,25 +474,38 @@ class AccountAvatar extends ConsumerWidget {
     final l10n = ref.read(l10nProvider);
     try {
       final url = await ref.read(apiProvider).youtubeAuthStart();
-      final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      final ok = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
       if (!ok) {
         messenger.showSnackBar(SnackBar(content: Text(l10n.cantOpenBrowser)));
       }
     } on DioApiException {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.accountsNotConfigured)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.accountsNotConfigured)),
+      );
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.connectionError)));
     }
   }
 
-  Future<void> _disconnect(BuildContext context, WidgetRef ref, YoutubeAccount account) async {
+  Future<void> _disconnect(
+    BuildContext context,
+    WidgetRef ref,
+    YoutubeAccount account,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = ref.read(l10nProvider);
     try {
       await ref.read(accountsProvider.notifier).remove(account);
-      messenger.showSnackBar(SnackBar(content: Text('${account.displayName} ${l10n.disconnected}')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('${account.displayName} ${l10n.disconnected}')),
+      );
     } on DioApiException {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.accountsNotConfigured)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.accountsNotConfigured)),
+      );
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.connectionError)));
     }
@@ -430,14 +519,19 @@ class AccountSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accounts = ref.watch(accountsProvider).value ?? const <YoutubeAccount>[];
+    final accounts =
+        ref.watch(accountsProvider).value ?? const <YoutubeAccount>[];
     final active = ref.watch(activeAccountProvider);
-    final activeOrFirst = active ?? (accounts.isNotEmpty ? accounts.first : null);
+    final activeOrFirst =
+        active ?? (accounts.isNotEmpty ? accounts.first : null);
 
     if (accounts.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: _LoginCard(l10n: l10n, onConnect: (context) => _connect(context, ref)),
+        child: _LoginCard(
+          l10n: l10n,
+          onConnect: (context) => _connect(context, ref),
+        ),
       );
     }
 
@@ -450,11 +544,23 @@ class AccountSection extends ConsumerWidget {
             dense: true,
             onTap: () => ref.read(activeAccountProvider.notifier).state = acc,
             leading: _avatar(scheme, acc),
-            title: Text(acc.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(acc.email, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(
+              acc.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              acc.email,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             trailing: Icon(
-              acc.email == activeOrFirst?.email ? Icons.check_circle_rounded : Icons.circle_outlined,
-              color: acc.email == activeOrFirst?.email ? scheme.primary : scheme.outline,
+              acc.email == activeOrFirst?.email
+                  ? Icons.check_circle_rounded
+                  : Icons.circle_outlined,
+              color: acc.email == activeOrFirst?.email
+                  ? scheme.primary
+                  : scheme.outline,
             ),
           ),
         const SizedBox(height: 4),
@@ -497,12 +603,25 @@ class AccountSection extends ConsumerWidget {
     final fallback = Container(
       width: 38,
       height: 38,
-      decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle),
-      child: Icon(Icons.person_rounded, size: 20, color: scheme.onSurfaceVariant),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.person_rounded,
+        size: 20,
+        color: scheme.onSurfaceVariant,
+      ),
     );
     if (acc.avatarUrl.isEmpty) return fallback;
     return ClipOval(
-      child: Image.network(acc.avatarUrl, width: 38, height: 38, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+      child: Image.network(
+        acc.avatarUrl,
+        width: 38,
+        height: 38,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      ),
     );
   }
 
@@ -511,25 +630,38 @@ class AccountSection extends ConsumerWidget {
     final l10n = ref.read(l10nProvider);
     try {
       final url = await ref.read(apiProvider).youtubeAuthStart();
-      final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      final ok = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
       if (!ok) {
         messenger.showSnackBar(SnackBar(content: Text(l10n.cantOpenBrowser)));
       }
     } on DioApiException {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.accountsNotConfigured)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.accountsNotConfigured)),
+      );
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.connectionError)));
     }
   }
 
-  Future<void> _disconnect(BuildContext context, WidgetRef ref, YoutubeAccount account) async {
+  Future<void> _disconnect(
+    BuildContext context,
+    WidgetRef ref,
+    YoutubeAccount account,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = ref.read(l10nProvider);
     try {
       await ref.read(accountsProvider.notifier).remove(account);
-      messenger.showSnackBar(SnackBar(content: Text('${account.displayName} ${l10n.disconnected}')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('${account.displayName} ${l10n.disconnected}')),
+      );
     } on DioApiException {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.accountsNotConfigured)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.accountsNotConfigured)),
+      );
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.connectionError)));
     }
@@ -547,20 +679,30 @@ class _LoginCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.account_circle_rounded, size: 40, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.account_circle_rounded,
+              size: 40,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.connectYouTube, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(
+                    l10n.connectYouTube,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 3),
-                  Text(l10n.connectYouTubeSubtitle, style: const TextStyle(fontSize: 12.5)),
+                  Text(
+                    l10n.connectYouTubeSubtitle,
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
                 ],
               ),
             ),
@@ -593,7 +735,18 @@ class _PlaylistSection extends ConsumerWidget {
       ),
       error: (err, _) => Padding(
         padding: const EdgeInsets.all(20),
-        child: Text(l10n.loadPlaylistError('$err'), style: TextStyle(fontSize: 13, color: scheme.error)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$err', style: TextStyle(fontSize: 13, color: scheme.error)),
+            const SizedBox(height: 6),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(playlistsProvider(account.email)),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: Text(l10n.tryAgain),
+            ),
+          ],
+        ),
       ),
       data: (list) => list.isEmpty
           ? Padding(
@@ -607,7 +760,8 @@ class _PlaylistSection extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _CardTitle(l10n.likedPlaylists),
-                for (final pl in list) _PlaylistListTile(playlist: pl, account: account),
+                for (final pl in list)
+                  _PlaylistListTile(playlist: pl, account: account),
               ],
             ),
     );
@@ -630,7 +784,13 @@ class _PlaylistListTile extends ConsumerWidget {
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: playlist.thumb.isNotEmpty
-            ? Image.network(playlist.thumb, width: 46, height: 46, fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
+            ? Image.network(
+                playlist.thumb,
+                width: 46,
+                height: 46,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _placeholder(scheme),
+              )
             : _placeholder(scheme),
       ),
       title: Text(playlist.title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -643,20 +803,28 @@ class _PlaylistListTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _play(BuildContext context, WidgetRef ref, PlayerController controller) async {
+  Future<void> _play(
+    BuildContext context,
+    WidgetRef ref,
+    PlayerController controller,
+  ) async {
     final l10n = ref.read(l10nProvider);
     try {
-      final tracks = await ref
-          .read(tracksProvider((account: account.email, playlistId: playlist.id)).future);
+      final tracks = await ref.read(
+        tracksProvider((account: account.email, playlistId: playlist.id))
+            .future,
+      );
       if (!context.mounted) return;
       if (tracks.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.playlistEmpty)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.playlistEmpty)));
         return;
       }
       controller.playFrom(tracks, 0);
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.failedToLoadTracks)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.failedToLoadTracks)));
     }
   }
 
@@ -670,7 +838,10 @@ class _PlaylistListTile extends ConsumerWidget {
   }
 }
 
-final playlistsProvider = FutureProvider.family<List<YoutubePlaylist>, String>((ref, email) async {
+final playlistsProvider = FutureProvider.family<List<YoutubePlaylist>, String>((
+  ref,
+  email,
+) async {
   final api = ref.read(apiProvider);
   final accounts = ref.read(accountsProvider).value ?? const <YoutubeAccount>[];
   final match = accounts.where((a) => a.email == email);
@@ -679,13 +850,21 @@ final playlistsProvider = FutureProvider.family<List<YoutubePlaylist>, String>((
 });
 
 final tracksProvider =
-    FutureProvider.family<List<Track>, ({String playlistId, String account})>((ref, args) async {
-  final api = ref.read(apiProvider);
-  final accounts = ref.read(accountsProvider).value ?? const <YoutubeAccount>[];
-  final match = accounts.where((a) => a.email == args.account);
-  final refreshToken = match.isNotEmpty ? match.first.refreshToken : null;
-  return api.youtubeTracks(args.account, args.playlistId, refreshToken: refreshToken);
-});
+    FutureProvider.family<List<Track>, ({String playlistId, String account})>((
+      ref,
+      args,
+    ) async {
+      final api = ref.read(apiProvider);
+      final accounts =
+          ref.read(accountsProvider).value ?? const <YoutubeAccount>[];
+      final match = accounts.where((a) => a.email == args.account);
+      final refreshToken = match.isNotEmpty ? match.first.refreshToken : null;
+      return api.youtubeTracks(
+        args.account,
+        args.playlistId,
+        refreshToken: refreshToken,
+      );
+    });
 
 class _RecommendedSection extends ConsumerWidget {
   const _RecommendedSection();
@@ -698,15 +877,15 @@ class _RecommendedSection extends ConsumerWidget {
     final controller = ref.read(playerControllerProvider.notifier);
 
     return rec.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: LinearProgressIndicator(minHeight: 2),
+      loading: () => StateLoading(
+        title: l10n.loadRecommendationsLoading,
+        subtitle: l10n.loadRecommendationsFailed,
       ),
       error: (err, _) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          children: [
             Text(
               err is ServerOfflineException
                   ? l10n.serverOffline
@@ -744,14 +923,16 @@ class _RecommendedSection extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       l10n.recommendedForYou,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   TextButton.icon(
                     onPressed: () => controller.playFrom(data.tracks, 0),
                     style: TextButton.styleFrom(
                       foregroundColor: scheme.primary,
-                      visualDensity: VisualDensity.compact,
                     ),
                     icon: const Icon(Icons.play_circle_fill_rounded, size: 19),
                     label: Text(l10n.playAll),
@@ -783,7 +964,11 @@ class _RecommendMenu extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final controller = ref.read(playerControllerProvider.notifier);
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded, size: 20, color: scheme.onSurfaceVariant),
+      icon: Icon(
+        Icons.more_vert_rounded,
+        size: 20,
+        color: scheme.onSurfaceVariant,
+      ),
       tooltip: l10n.moreActions,
       onSelected: (action) async {
         switch (action) {
@@ -796,15 +981,34 @@ class _RecommendMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (_) => [
-        _menuItem(scheme, 'playNext', Icons.playlist_add_rounded, l10n.playNext),
-        _menuItem(scheme, 'enqueue', Icons.queue_music_rounded, l10n.addToQueue),
-        _menuItem(scheme, 'playlist', Icons.playlist_add_rounded, l10n.addToPlaylist),
+        _menuItem(
+          scheme,
+          'playNext',
+          Icons.playlist_add_rounded,
+          l10n.playNext,
+        ),
+        _menuItem(
+          scheme,
+          'enqueue',
+          Icons.queue_music_rounded,
+          l10n.addToQueue,
+        ),
+        _menuItem(
+          scheme,
+          'playlist',
+          Icons.playlist_add_rounded,
+          l10n.addToPlaylist,
+        ),
       ],
     );
   }
 
   static PopupMenuItem<String> _menuItem(
-      ColorScheme scheme, String value, IconData icon, String label) {
+    ColorScheme scheme,
+    String value,
+    IconData icon,
+    String label,
+  ) {
     return PopupMenuItem(
       value: value,
       height: 44,
@@ -818,4 +1022,3 @@ class _RecommendMenu extends ConsumerWidget {
     );
   }
 }
-

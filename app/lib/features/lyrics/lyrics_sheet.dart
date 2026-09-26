@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n.dart';
 import '../../core/models.dart';
+import '../../core/widgets/state_shell.dart';
 import '../player/player_provider.dart';
 import 'lyrics_provider.dart';
 
@@ -14,7 +15,9 @@ class LyricsSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(l10nProvider);
-    final lyrics = ref.watch(lyricsProvider((track: track.title, artist: _artist)));
+    final lyrics = ref.watch(
+      lyricsProvider((track: track.title, artist: _artist)),
+    );
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.8,
@@ -31,7 +34,10 @@ class LyricsSheet extends ConsumerWidget {
                       l10n.lyricsTitle(track.title),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -44,8 +50,9 @@ class LyricsSheet extends ConsumerWidget {
             const Divider(height: 1),
             Expanded(
               child: lyrics.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => _Message(l10n.lyricsNotFound, '${l10n.lyricsNotFound} ($err)'),
+                loading: () => StateLoading(title: l10n.lyricsLoading),
+                error: (err, _) =>
+                    _Message(l10n.lyricsNotFound, l10n.lyricsNotInDb),
                 data: (result) {
                   if (!result.found) {
                     return _Message(l10n.lyricsNotFound, l10n.lyricsNotInDb);
@@ -63,8 +70,7 @@ class LyricsSheet extends ConsumerWidget {
     );
   }
 
-  String get _artist =>
-      track.artist.isNotEmpty ? track.artist : track.uploader;
+  String get _artist => track.artist.isNotEmpty ? track.artist : track.uploader;
 }
 
 class _PlainView extends StatelessWidget {
@@ -93,7 +99,8 @@ class _SyncedView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final position = ref.watch(playerPositionProvider).value?.position ?? Duration.zero;
+    final position =
+        ref.watch(playerPositionProvider).value?.position ?? Duration.zero;
     var active = -1;
     for (var i = 0; i < lyrics.lines.length; i++) {
       if (lyrics.lines[i].time <= position) {
@@ -128,10 +135,7 @@ class _SyncedView extends ConsumerWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 6),
-            child: Text(
-              lyrics.lines[index].text,
-              textAlign: TextAlign.center,
-            ),
+            child: Text(lyrics.lines[index].text, textAlign: TextAlign.center),
           ),
         );
       },
@@ -154,9 +158,16 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lyrics_outlined, size: 40, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.lyrics_outlined,
+              size: 40,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 6),
             Text(
               subtitle,

@@ -18,10 +18,10 @@ enum AppTab {
   final IconData icon;
 
   String label(L10n l10n) => switch (this) {
-        AppTab.forYou => l10n.forYou,
-        AppTab.search => l10n.search,
-        AppTab.playlist => l10n.playlist,
-      };
+    AppTab.forYou => l10n.forYou,
+    AppTab.search => l10n.search,
+    AppTab.playlist => l10n.playlist,
+  };
   String title(L10n l10n) => label(l10n);
 }
 
@@ -53,11 +53,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          tab.title(l10n).toUpperCase(),
+          tab.title(l10n),
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.4,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -67,8 +67,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             tooltip: l10n.changeLanguage,
             onPressed: () {
               final current = ref.read(languageProvider);
-              ref.read(languageProvider.notifier).state =
-                  current == 'en' ? 'id' : 'en';
+              ref.read(languageProvider.notifier).state = current == 'en'
+                  ? 'id'
+                  : 'en';
             },
           ),
           IconButton(
@@ -98,11 +99,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       children: [
         Expanded(child: _body(tab)),
         const MiniPlayer(),
-        _PillNav(
-          selected: _index,
-          l10n: l10n,
-          onSelected: _onTabSelected,
-        ),
+        _PillNav(selected: _index, l10n: l10n, onSelected: _onTabSelected),
       ],
     );
   }
@@ -115,8 +112,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           onDestinationSelected: _onTabSelected,
           leading: Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Icon(Icons.graphic_eq_rounded,
-                size: 30, color: Theme.of(context).colorScheme.primary),
+            child: Icon(
+              Icons.graphic_eq_rounded,
+              size: 30,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           destinations: [
             for (final t in AppTab.values)
@@ -148,7 +148,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 }
 
 class _PillNav extends StatelessWidget {
-  const _PillNav({required this.selected, required this.l10n, required this.onSelected});
+  const _PillNav({
+    required this.selected,
+    required this.l10n,
+    required this.onSelected,
+  });
 
   final int selected;
   final L10n l10n;
@@ -209,7 +213,11 @@ class _NavItem extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: selected ? scheme.onPrimary : scheme.onSurfaceVariant),
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 6),
             Text(
               label,

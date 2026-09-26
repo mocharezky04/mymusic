@@ -26,7 +26,6 @@ class AddToPlaylistIconButton extends ConsumerWidget {
       onPressed: () => pickPlaylistForTrack(context, track),
       icon: const Icon(Icons.playlist_add_rounded, size: 20),
       tooltip: ref.watch(l10nProvider).addToPlaylist,
-      visualDensity: VisualDensity.compact,
     );
   }
 }
@@ -50,7 +49,9 @@ class _PickPlaylistSheet extends ConsumerWidget {
     }
 
     void notify(String name) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.addedToPlaylist(name))));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.addedToPlaylist(name))),
+      );
     }
 
     return SafeArea(
@@ -71,12 +72,19 @@ class _PickPlaylistSheet extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
             child: Row(
               children: [
-                Icon(Icons.playlist_add_rounded, size: 20, color: scheme.primary),
+                Icon(
+                  Icons.playlist_add_rounded,
+                  size: 20,
+                  color: scheme.primary,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     l10n.pickPlaylistTitle,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -90,7 +98,9 @@ class _PickPlaylistSheet extends ConsumerWidget {
                 onPressed: () async {
                   final name = await askPlaylistName(context, l10n);
                   if (name == null || !context.mounted) return;
-                  final id = await ref.read(playlistsProvider.notifier).create(name);
+                  final id = await ref
+                      .read(playlistsProvider.notifier)
+                      .create(name);
                   await addTo(id, name);
                   if (context.mounted) notify(name);
                 },
@@ -101,9 +111,28 @@ class _PickPlaylistSheet extends ConsumerWidget {
           ),
           Flexible(
             child: playlists.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: SizedBox(
+                    width: 240,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          l10n.loadPlaylistsLoading,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
               error: (err, _) => Padding(
                 padding: const EdgeInsets.all(24),
@@ -120,7 +149,10 @@ class _PickPlaylistSheet extends ConsumerWidget {
                     child: Text(
                       l10n.pickPlaylistEmpty,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }
@@ -150,7 +182,11 @@ class _PickPlaylistSheet extends ConsumerWidget {
 }
 
 class _PlaylistRow extends ConsumerWidget {
-  const _PlaylistRow({required this.playlist, required this.track, required this.onTap});
+  const _PlaylistRow({
+    required this.playlist,
+    required this.track,
+    required this.onTap,
+  });
 
   final PlaylistRow playlist;
   final Track track;
@@ -160,15 +196,20 @@ class _PlaylistRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
-    final tracks = ref.watch(playlistTracksProvider(playlist.id)).value ?? const <Track>[];
-    final alreadyAdded =
-        tracks.any((t) => t.id == track.id && t.source == track.source);
+    final tracks =
+        ref.watch(playlistTracksProvider(playlist.id)).value ?? const <Track>[];
+    final alreadyAdded = tracks.any(
+      (t) => t.id == track.id && t.source == track.source,
+    );
 
     return ListTile(
       dense: true,
       onTap: onTap,
       enabled: !alreadyAdded,
-      leading: Icon(Icons.playlist_play_rounded, color: alreadyAdded ? scheme.outline : scheme.primary),
+      leading: Icon(
+        Icons.playlist_play_rounded,
+        color: alreadyAdded ? scheme.outline : scheme.primary,
+      ),
       title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         alreadyAdded ? l10n.alreadyInPlaylists : l10n.trackCount(tracks.length),
@@ -181,7 +222,11 @@ class _PlaylistRow extends ConsumerWidget {
   }
 }
 
-Future<String?> askPlaylistName(BuildContext context, L10n l10n, {String initial = ''}) async {
+Future<String?> askPlaylistName(
+  BuildContext context,
+  L10n l10n, {
+  String initial = '',
+}) async {
   final controller = TextEditingController(text: initial);
   final messenger = ScaffoldMessenger.of(context);
   final result = await showDialog<String>(
@@ -201,7 +246,9 @@ Future<String?> askPlaylistName(BuildContext context, L10n l10n, {String initial
           onChanged: (v) => value = v,
           onSubmitted: (v) {
             if (v.trim().isEmpty) {
-              messenger.showSnackBar(SnackBar(content: Text(l10n.playlistEmptyName)));
+              messenger.showSnackBar(
+                SnackBar(content: Text(l10n.playlistEmptyName)),
+              );
               return;
             }
             Navigator.of(ctx).pop(v.trim());
@@ -216,7 +263,9 @@ Future<String?> askPlaylistName(BuildContext context, L10n l10n, {String initial
             onPressed: () {
               final v = value ?? controller.text;
               if (v.trim().isEmpty) {
-                messenger.showSnackBar(SnackBar(content: Text(l10n.playlistEmptyName)));
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.playlistEmptyName)),
+                );
                 return;
               }
               Navigator.of(ctx).pop(v.trim());

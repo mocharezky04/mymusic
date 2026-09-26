@@ -9,7 +9,12 @@ import 'eq_bars.dart';
 import 'source_badge.dart';
 
 class TrackArtwork extends StatelessWidget {
-  const TrackArtwork({super.key, required this.track, this.size = 48, this.radius = 8});
+  const TrackArtwork({
+    super.key,
+    required this.track,
+    this.size = 48,
+    this.radius = 8,
+  });
 
   final Track track;
   final double size;
@@ -26,7 +31,11 @@ class TrackArtwork extends StatelessWidget {
           color: scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(radius),
         ),
-        child: Icon(Icons.music_note, size: size * 0.5, color: scheme.onSurfaceVariant),
+        child: Icon(
+          Icons.music_note,
+          size: size * 0.5,
+          color: scheme.onSurfaceVariant,
+        ),
       );
     }
     return ClipRRect(
@@ -40,13 +49,21 @@ class TrackArtwork extends StatelessWidget {
           width: size,
           height: size,
           color: scheme.surfaceContainerHighest,
-          child: Icon(Icons.music_note, size: size * 0.5, color: scheme.onSurfaceVariant),
+          child: Icon(
+            Icons.music_note,
+            size: size * 0.5,
+            color: scheme.onSurfaceVariant,
+          ),
         ),
         errorWidget: (_, _, _) => Container(
           width: size,
           height: size,
           color: scheme.surfaceContainerHighest,
-          child: Icon(Icons.music_note, size: size * 0.5, color: scheme.onSurfaceVariant),
+          child: Icon(
+            Icons.music_note,
+            size: size * 0.5,
+            color: scheme.onSurfaceVariant,
+          ),
         ),
       ),
     );
@@ -78,7 +95,9 @@ class TrackTile extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
-        color: isCurrent ? scheme.primary.withValues(alpha: 0.08) : scheme.surfaceContainerLow,
+        color: isCurrent
+            ? scheme.primary.withValues(alpha: 0.08)
+            : scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: InkWell(
@@ -100,7 +119,9 @@ class TrackTile extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isCurrent
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: isCurrent ? scheme.primary : scheme.onSurface,
                       ),
                     ),
@@ -109,7 +130,10 @@ class TrackTile extends ConsumerWidget {
                       track.artist.isEmpty ? track.uploader : track.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -122,7 +146,10 @@ class TrackTile extends ConsumerWidget {
               const SizedBox(width: 8),
               Text(
                 track.durationLabel,
-                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(width: 4),
               if (onAdd != null)
@@ -130,7 +157,6 @@ class TrackTile extends ConsumerWidget {
                   onPressed: onAdd,
                   icon: const Icon(Icons.queue_music, size: 20),
                   tooltip: l10n.addToQueueShort,
-                  visualDensity: VisualDensity.compact,
                 ),
               if (trailing != null) ...[const SizedBox(width: 4), trailing!],
             ],

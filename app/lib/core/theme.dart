@@ -124,7 +124,10 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        hintStyle: TextStyle(color: scheme.onSurfaceVariant, letterSpacing: 0.2),
+        hintStyle: TextStyle(
+          color: scheme.onSurfaceVariant,
+          letterSpacing: 0.2,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
           borderSide: BorderSide.none,
@@ -133,17 +136,22 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(AppRadius.lg),
           borderSide: BorderSide(color: scheme.primary, width: 1.4),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 13,
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scheme.surface,
         indicatorColor: scheme.primary.withValues(alpha: 0.16),
         height: 66,
-        labelTextStyle: WidgetStatePropertyAll(TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: scheme.onSurfaceVariant,
-        )),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
       ),
       sliderTheme: SliderThemeData(
         activeTrackColor: scheme.primary,
@@ -165,7 +173,9 @@ abstract final class AppTheme {
         backgroundColor: scheme.surfaceContainerHighest,
         contentTextStyle: TextStyle(color: scheme.onSurface),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
       ),
     );
   }

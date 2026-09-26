@@ -36,18 +36,29 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
     final track = ref.watch(playerControllerProvider.select((s) => s.current));
-    final playing = ref.watch(playerControllerProvider.select((s) => s.playing));
-    final loading = ref.watch(playerControllerProvider.select((s) => s.loading));
-    final hasTrack = ref.watch(playerControllerProvider.select((s) => s.hasTrack));
+    final playing = ref.watch(
+      playerControllerProvider.select((s) => s.playing),
+    );
+    final loading = ref.watch(
+      playerControllerProvider.select((s) => s.loading),
+    );
+    final hasTrack = ref.watch(
+      playerControllerProvider.select((s) => s.hasTrack),
+    );
     final repeat = ref.watch(playerControllerProvider.select((s) => s.repeat));
-    final shuffle = ref.watch(playerControllerProvider.select((s) => s.shuffle));
+    final shuffle = ref.watch(
+      playerControllerProvider.select((s) => s.shuffle),
+    );
     final hasNext = ref.watch(
       playerControllerProvider.select((s) => s.index + 1 < s.queue.length),
     );
     final position = ref.watch(playerPositionProvider).value;
     final pos = position?.position ?? Duration.zero;
-    final dur = position?.duration ??
-        (track != null ? Duration(seconds: track.durationSeconds) : Duration.zero);
+    final dur =
+        position?.duration ??
+        (track != null
+            ? Duration(seconds: track.durationSeconds)
+            : Duration.zero);
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +69,11 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
         ),
         title: Text(
           l10n.nowPlaying,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
         ),
         centerTitle: true,
         toolbarHeight: 44,
@@ -79,25 +94,57 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
             onPressed: track == null
                 ? null
                 : () => showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: scheme.surfaceContainerLow,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: scheme.surfaceContainerLow,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(AppRadius.xl),
                       ),
-                      builder: (_) => LyricsSheet(track: track),
                     ),
+                    builder: (_) => LyricsSheet(track: track),
+                  ),
           ),
         ],
       ),
       body: track == null
           ? Center(
-              child: Text(l10n.noPlayer, style: TextStyle(color: scheme.onSurfaceVariant)),
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.music_off_rounded,
+                      size: 40,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.noPlayer,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.queueEmptySubtitle,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             )
           : GestureDetector(
               onVerticalDragUpdate: (details) {
                 setState(() {
-                  _verticalDragDelta = (_verticalDragDelta ?? 0) + (details.primaryDelta ?? 0);
+                  _verticalDragDelta =
+                      (_verticalDragDelta ?? 0) + (details.primaryDelta ?? 0);
                   if (_verticalDragDelta! < 0) _verticalDragDelta = 0;
                 });
               },
@@ -114,154 +161,182 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen> {
               child: Transform.translate(
                 offset: Offset(0, (_verticalDragDelta ?? 0).clamp(0.0, 200.0)),
                 child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.violet.withValues(alpha: 0.32),
-                          AppColors.cyan.withValues(alpha: 0.10),
-                          scheme.surface.withValues(alpha: 0.0),
-                          scheme.surface,
-                        ],
-                        stops: const [0.0, 0.30, 0.55, 1],
-                      ),
-                    ),
-                  ),
-                ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          flex: 5,
-                          child: Center(
-                            child: GestureDetector(
-                              onHorizontalDragEnd: (details) {
-                                if (details.primaryVelocity == null) return;
-                                if (details.primaryVelocity! < -600) {
-                                  controller.next();
-                                } else if (details.primaryVelocity! > 600) {
-                                  controller.previous();
-                                }
-                              },
-                              child: _GlowArtwork(track: track, playing: playing),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
+                  children: [
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Column(
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              flex: 5,
+                              child: Center(
+                                child: GestureDetector(
+                                  onHorizontalDragEnd: (details) {
+                                    if (details.primaryVelocity == null) return;
+                                    if (details.primaryVelocity! < -600) {
+                                      controller.next();
+                                    } else if (details.primaryVelocity! > 600) {
+                                      controller.previous();
+                                    }
+                                  },
+                                  child: _GlowArtwork(
+                                    track: track,
+                                    playing: playing,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        track.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.15,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        track.artist.isEmpty
+                                            ? track.uploader
+                                            : track.artist,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (playing) ...[
+                                  const SizedBox(width: 14),
+                                  EqBars(active: true, height: 18, width: 22),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Slider(
+                              value: dur.inMilliseconds > 0
+                                  ? (_dragMs ?? _clampMs(pos, dur))
+                                  : 0,
+                              max: dur.inMilliseconds > 0
+                                  ? dur.inMilliseconds.toDouble()
+                                  : 1,
+                              onChanged: dur.inMilliseconds > 0
+                                  ? (v) => setState(() => _dragMs = v)
+                                  : null,
+                              onChangeEnd: dur.inMilliseconds > 0
+                                  ? (v) {
+                                      controller.seek(
+                                        Duration(milliseconds: v.round()),
+                                      );
+                                      setState(() => _dragMs = null);
+                                    }
+                                  : null,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    track.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.15),
+                                    _fmt(
+                                      Duration(
+                                        milliseconds:
+                                            _dragMs?.round() ??
+                                            pos.inMilliseconds,
+                                      ),
+                                    ),
+                                    style: _timeStyle(scheme),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    track.artist.isEmpty ? track.uploader : track.artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
-                                  ),
+                                  Text(_fmt(dur), style: _timeStyle(scheme)),
                                 ],
                               ),
                             ),
-                            if (playing) ...[
-                              const SizedBox(width: 14),
-                              EqBars(active: true, height: 18, width: 22),
-                            ],
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: _CircleButton(
+                                    icon: Icons.shuffle_rounded,
+                                    active: shuffle,
+                                    activeDot: shuffle,
+                                    onPressed: hasTrack
+                                        ? () => controller.toggleShuffle()
+                                        : null,
+                                  ),
+                                ),
+                                _CircleButton(
+                                  icon: Icons.skip_previous_rounded,
+                                  size: 36,
+                                  onPressed: hasTrack
+                                      ? controller.previous
+                                      : null,
+                                ),
+                                _PlayButton(
+                                  playing: playing,
+                                  loading: loading,
+                                  onPressed: hasTrack
+                                      ? controller.toggle
+                                      : null,
+                                ),
+                                _CircleButton(
+                                  icon: Icons.skip_next_rounded,
+                                  size: 36,
+                                  onPressed: hasTrack ? controller.next : null,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: _CircleButton(
+                                    icon: repeat == PlaybackRepeat.one
+                                        ? Icons.repeat_one_rounded
+                                        : Icons.repeat_rounded,
+                                    active: repeat != PlaybackRepeat.off,
+                                    activeDot: repeat != PlaybackRepeat.off,
+                                    onPressed: hasTrack
+                                        ? controller.cycleRepeat
+                                        : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            if (hasNext)
+                              _UpNextButton(scheme: scheme, l10n: l10n),
                           ],
                         ),
-                        const SizedBox(height: 10),
-                        Slider(
-                          value: dur.inMilliseconds > 0
-                              ? (_dragMs ?? _clampMs(pos, dur))
-                              : 0,
-                          max: dur.inMilliseconds > 0 ? dur.inMilliseconds.toDouble() : 1,
-                          onChanged: dur.inMilliseconds > 0
-                              ? (v) => setState(() => _dragMs = v)
-                              : null,
-                          onChangeEnd: dur.inMilliseconds > 0
-                              ? (v) {
-                                  controller.seek(Duration(milliseconds: v.round()));
-                                  setState(() => _dragMs = null);
-                                }
-                              : null,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(_fmt(Duration(milliseconds: _dragMs?.round() ?? pos.inMilliseconds)), style: _timeStyle(scheme)),
-                              Text(_fmt(dur), style: _timeStyle(scheme)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: _CircleButton(
-                                icon: Icons.shuffle_rounded,
-                                active: shuffle,
-                                activeDot: shuffle,
-                                onPressed: hasTrack ? () => controller.toggleShuffle() : null,
-                              ),
-                            ),
-                            _CircleButton(
-                              icon: Icons.skip_previous_rounded,
-                              size: 36,
-                              onPressed: hasTrack ? controller.previous : null,
-                            ),
-                            _PlayButton(playing: playing, loading: loading, onPressed: hasTrack ? controller.toggle : null),
-                            _CircleButton(
-                              icon: Icons.skip_next_rounded,
-                              size: 36,
-                              onPressed: hasTrack ? controller.next : null,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _CircleButton(
-                                icon: repeat == PlaybackRepeat.one
-                                    ? Icons.repeat_one_rounded
-                                    : Icons.repeat_rounded,
-                                active: repeat != PlaybackRepeat.off,
-                                activeDot: repeat != PlaybackRepeat.off,
-                                onPressed: hasTrack ? controller.cycleRepeat : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        if (hasNext) _UpNextButton(scheme: scheme, l10n: l10n),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
     );
   }
 
   double? _verticalDragDelta;
 
-  TextStyle _timeStyle(ColorScheme scheme) =>
-      TextStyle(fontSize: 11, fontFeatures: const [FontFeature.tabularFigures()], color: scheme.onSurfaceVariant);
+  TextStyle _timeStyle(ColorScheme scheme) => TextStyle(
+    fontSize: 11,
+    fontFeatures: const [FontFeature.tabularFigures()],
+    color: scheme.onSurfaceVariant,
+  );
 
   double _clampMs(Duration position, Duration duration) {
     if (duration.inMilliseconds <= 0) return 0;
@@ -293,7 +368,11 @@ class _UpNextButton extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
-                Icon(Icons.queue_music_rounded, size: 16, color: scheme.onSurfaceVariant),
+                Icon(
+                  Icons.queue_music_rounded,
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -310,7 +389,11 @@ class _UpNextButton extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(Icons.expand_less_rounded, size: 18, color: scheme.onSurfaceVariant),
+                Icon(
+                  Icons.expand_less_rounded,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
               ],
             ),
           ),
@@ -339,14 +422,11 @@ class _GlowArtwork extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.violet.withValues(alpha: playing ? 0.55 : 0.28),
-                blurRadius: 110,
-                spreadRadius: 10,
-              ),
-              BoxShadow(
-                color: AppColors.cyan.withValues(alpha: playing ? 0.35 : 0.18),
-                blurRadius: 80,
-                spreadRadius: 2,
+                color: AppColors.violet.withValues(
+                  alpha: playing ? 0.40 : 0.20,
+                ),
+                blurRadius: 70,
+                spreadRadius: 4,
               ),
             ],
           ),
@@ -354,7 +434,11 @@ class _GlowArtwork extends StatelessWidget {
             tag: 'artwork-${track.id}',
             child: Material(
               type: MaterialType.transparency,
-              child: TrackArtwork(track: track, size: 300, radius: 24),
+              child: TrackArtwork(
+                track: track,
+                size: 300,
+                radius: AppRadius.lg,
+              ),
             ),
           ),
         ),
@@ -382,7 +466,9 @@ class _CircleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = !active
-        ? (onPressed == null ? scheme.onSurfaceVariant.withValues(alpha: 0.35) : scheme.onSurfaceVariant)
+        ? (onPressed == null
+              ? scheme.onSurfaceVariant.withValues(alpha: 0.35)
+              : scheme.onSurfaceVariant)
         : scheme.primary;
     return IconButton(
       onPressed: onPressed,
@@ -396,7 +482,10 @@ class _CircleButton extends StatelessWidget {
               child: Container(
                 width: 4,
                 height: 4,
-                decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
         ],
@@ -406,7 +495,11 @@ class _CircleButton extends StatelessWidget {
 }
 
 class _PlayButton extends StatelessWidget {
-  const _PlayButton({required this.playing, required this.loading, this.onPressed});
+  const _PlayButton({
+    required this.playing,
+    required this.loading,
+    this.onPressed,
+  });
 
   final bool playing;
   final bool loading;
@@ -418,8 +511,8 @@ class _PlayButton extends StatelessWidget {
     return Material(
       shape: const CircleBorder(),
       color: scheme.primary,
-      elevation: 8,
-      shadowColor: scheme.primary.withValues(alpha: 0.5),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.35),
       child: InkWell(
         onTap: onPressed,
         customBorder: const CircleBorder(),
@@ -461,11 +554,13 @@ class _DownloadButtonState extends ConsumerState<_DownloadButton> {
   }
 
   Future<void> _loadState() async {
-    final exists = await ref.read(downloadServiceProvider).existing(widget.track);
+    final exists = await ref
+        .read(downloadServiceProvider)
+        .existing(widget.track);
     if (mounted) setState(() => _available = exists != null);
   }
 
-Future<void> _start() async {
+  Future<void> _start() async {
     final service = ref.read(downloadServiceProvider);
     final l10n = widget.l10n;
     setState(() {
@@ -489,14 +584,17 @@ Future<void> _start() async {
         _busy = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${widget.track.title}" ${l10n.downloadSavedForOffline}')),
+        SnackBar(
+          content: Text(
+            '"${widget.track.title}" ${l10n.downloadSavedForOffline}',
+          ),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.downloadFailed)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.downloadFailed)));
     }
   }
 
@@ -505,9 +603,8 @@ Future<void> _start() async {
     await ref.read(downloadServiceProvider).remove(widget.track);
     if (!mounted) return;
     setState(() => _available = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.downloadRemoved)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l10n.downloadRemoved)));
   }
 
   @override

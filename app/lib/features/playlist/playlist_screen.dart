@@ -16,7 +16,6 @@ class PlaylistScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(l10nProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,15 +26,14 @@ class PlaylistScreen extends ConsumerWidget {
             children: [
               Text(
                 l10n.playlist,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const Spacer(),
               FilledButton.icon(
                 onPressed: () => _create(context, ref),
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  backgroundColor: scheme.primary,
-                ),
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text(l10n.newPlaylist),
               ),
@@ -43,42 +41,47 @@ class PlaylistScreen extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: ref.watch(playlistsProvider).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => StateMessage(
-              icon: Icons.error_outline_rounded,
-              title: l10n.loadPlaylistsFailed,
-              subtitle: '$err',
-              action: TextButton.icon(
-                onPressed: () => ref.invalidate(playlistsProvider),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: Text(l10n.tryAgain),
-              ),
-            ),
-            data: (playlists) {
-              if (playlists.isEmpty) {
-                return StateMessage(
-                  icon: Icons.queue_music_rounded,
-                  title: l10n.emptyPlaylistsTitle,
-                  subtitle: l10n.emptyPlaylistsSubtitle,
-                  action: FilledButton.icon(
-                    onPressed: () => _create(context, ref),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: Text(l10n.newPlaylist),
+          child: ref
+              .watch(playlistsProvider)
+              .when(
+                loading: () => StateLoading(
+                  title: l10n.loadPlaylistsLoading,
+                  subtitle: l10n.loadPlaylistHint,
+                ),
+                error: (err, _) => StateMessage(
+                  icon: Icons.error_outline_rounded,
+                  title: l10n.loadPlaylistsFailed,
+                  subtitle: '$err',
+                  action: TextButton.icon(
+                    onPressed: () => ref.invalidate(playlistsProvider),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: Text(l10n.tryAgain),
                   ),
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.only(bottom: 16),
-                itemCount: playlists.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 4),
-                itemBuilder: (context, index) {
-                  final pl = playlists[index];
-                  return _PlaylistTile(playlist: pl);
+                ),
+                data: (playlists) {
+                  if (playlists.isEmpty) {
+                    return StateMessage(
+                      icon: Icons.queue_music_rounded,
+                      title: l10n.emptyPlaylistsTitle,
+                      subtitle: l10n.emptyPlaylistsSubtitle,
+                      action: FilledButton.icon(
+                        onPressed: () => _create(context, ref),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: Text(l10n.newPlaylist),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    itemCount: playlists.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final pl = playlists[index];
+                      return _PlaylistTile(playlist: pl);
+                    },
+                  );
                 },
-              );
-            },
-          ),
+              ),
         ),
       ],
     );
@@ -101,7 +104,8 @@ class _PlaylistTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
-    final tracks = ref.watch(playlistTracksProvider(playlist.id)).value ?? const [];
+    final tracks =
+        ref.watch(playlistTracksProvider(playlist.id)).value ?? const [];
     final controller = ref.read(playerControllerProvider.notifier);
 
     return Container(
@@ -111,7 +115,9 @@ class _PlaylistTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -126,9 +132,17 @@ class _PlaylistTile extends ConsumerWidget {
             color: scheme.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
-          child: Icon(Icons.playlist_play_rounded, size: 26, color: scheme.primary),
+          child: Icon(
+            Icons.playlist_play_rounded,
+            size: 26,
+            color: scheme.primary,
+          ),
         ),
-        title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          playlist.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         subtitle: Text(l10n.trackCount(tracks.length)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -184,10 +198,15 @@ class _PlaylistTile extends ConsumerWidget {
         title: Text(l10n.deletePlaylistTitle),
         content: Text(l10n.deletePlaylistConfirm(playlist.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(l10n.delete),
           ),
         ],
@@ -211,7 +230,11 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 19, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        Icon(
+          icon,
+          size: 19,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 12),
         Text(label, style: const TextStyle(fontSize: 14)),
       ],

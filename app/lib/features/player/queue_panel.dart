@@ -24,16 +24,24 @@ class QueuePanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final queue = ref.watch(playerControllerProvider.select((s) => s.queue));
-    final currentIndex = ref.watch(playerControllerProvider.select((s) => s.index));
-    final playing = ref.watch(playerControllerProvider.select((s) => s.playing));
+    final currentIndex = ref.watch(
+      playerControllerProvider.select((s) => s.index),
+    );
+    final playing = ref.watch(
+      playerControllerProvider.select((s) => s.playing),
+    );
     final controller = ref.read(playerControllerProvider.notifier);
     final scheme = Theme.of(context).colorScheme;
     final l10n = ref.watch(l10nProvider);
     final mediaQuery = MediaQuery.of(context);
 
-    final current = (currentIndex >= 0 && currentIndex < queue.length) ? queue[currentIndex] : null;
+    final current = (currentIndex >= 0 && currentIndex < queue.length)
+        ? queue[currentIndex]
+        : null;
     final upcomingStart = current == null ? 0 : currentIndex + 1;
-    final upcoming = upcomingStart < queue.length ? queue.sublist(upcomingStart) : <dynamic>[];
+    final upcoming = upcomingStart < queue.length
+        ? queue.sublist(upcomingStart)
+        : <dynamic>[];
 
     return Padding(
       padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
@@ -41,12 +49,14 @@ class QueuePanel extends ConsumerWidget {
         constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.75),
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.xl),
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.violet.withValues(alpha: 0.35),
-              blurRadius: 28,
-              offset: const Offset(0, -8),
+              color: Colors.black.withValues(alpha: 0.30),
+              blurRadius: 24,
+              offset: const Offset(0, -6),
             ),
           ],
         ),
@@ -68,15 +78,19 @@ class QueuePanel extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 14, 8, 4),
                 child: Row(
                   children: [
-                    Icon(Icons.queue_music_rounded, size: 18, color: scheme.primary),
+                    Icon(
+                      Icons.queue_music_rounded,
+                      size: 18,
+                      color: scheme.primary,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         l10n.queue,
                         style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
                         ),
                       ),
                     ),
@@ -102,18 +116,30 @@ class QueuePanel extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.queue_music_rounded, size: 40, color: scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                          Icon(
+                            Icons.queue_music_rounded,
+                            size: 40,
+                            color: scheme.onSurfaceVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             l10n.queueEmptyTitle,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             l10n.queueEmptySubtitle,
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -146,7 +172,12 @@ class QueuePanel extends ConsumerWidget {
                         ),
                       ],
                       Padding(
-                        padding: EdgeInsets.fromLTRB(20, current == null ? 8 : 14, 20, 6),
+                        padding: EdgeInsets.fromLTRB(
+                          20,
+                          current == null ? 8 : 14,
+                          20,
+                          6,
+                        ),
                         child: Row(
                           children: [
                             Text(
@@ -160,7 +191,10 @@ class QueuePanel extends ConsumerWidget {
                             ),
                             const SizedBox(width: 10),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: scheme.primary.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(99),
@@ -180,7 +214,9 @@ class QueuePanel extends ConsumerWidget {
                                 l10n.reorderHint,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                                  color: scheme.onSurfaceVariant.withValues(
+                                    alpha: 0.75,
+                                  ),
                                 ),
                               ),
                             ),
@@ -222,7 +258,12 @@ class QueuePanel extends ConsumerWidget {
                                   controller.playFrom(queue, sourceIndex);
                                   Navigator.of(context).pop();
                                 },
-                                onRemove: () => _removeAndUndo(context, ref, sourceIndex, t.title),
+                                onRemove: () => _removeAndUndo(
+                                  context,
+                                  ref,
+                                  sourceIndex,
+                                  t.title,
+                                ),
                               ),
                             );
                           },
@@ -254,7 +295,9 @@ class QueuePanel extends ConsumerWidget {
               Navigator.pop(ctx);
               ref.read(playerControllerProvider.notifier).clearQueue();
             },
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(l10n.clearQueue),
           ),
         ],
@@ -262,7 +305,12 @@ class QueuePanel extends ConsumerWidget {
     );
   }
 
-  void _removeAndUndo(BuildContext context, WidgetRef ref, int index, String title) {
+  void _removeAndUndo(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    String title,
+  ) {
     final controller = ref.read(playerControllerProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     final currentState = ref.read(playerControllerProvider);
@@ -281,7 +329,9 @@ class QueuePanel extends ConsumerWidget {
           label: l10n.undo,
           onPressed: () {
             final latest = ref.read(playerControllerProvider);
-            final target = (index <= latest.queue.length) ? index : latest.queue.length;
+            final target = (index <= latest.queue.length)
+                ? index
+                : latest.queue.length;
             controller.addAt(removed, target, shiftCurrent: shift);
             messenger.hideCurrentSnackBar();
           },

@@ -39,11 +39,17 @@ class PlaylistDetailScreen extends ConsumerWidget {
         ],
       ),
       body: tracks.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => StateLoading(title: l10n.loadSongsLoading),
         error: (err, _) => StateMessage(
           icon: Icons.error_outline_rounded,
-          title: l10n.playlistDeleted,
+          title: l10n.loadPlaylistsFailed,
           subtitle: '$err',
+          action: TextButton.icon(
+            onPressed: () =>
+                ref.invalidate(playlistTracksProvider(playlist.id)),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(l10n.tryAgain),
+          ),
         ),
         data: (list) {
           if (list.isEmpty) {
@@ -62,12 +68,19 @@ class PlaylistDetailScreen extends ConsumerWidget {
                   children: [
                     Text(
                       l10n.trackCount(list.length).toUpperCase(),
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                     const Spacer(),
                     TextButton.icon(
                       onPressed: () => controller.playFrom(list, 0),
-                      icon: const Icon(Icons.play_circle_fill_rounded, size: 19),
+                      icon: const Icon(
+                        Icons.play_circle_fill_rounded,
+                        size: 19,
+                      ),
                       label: Text(l10n.playAllLabel),
                     ),
                     const SizedBox(width: 4),
@@ -85,7 +98,9 @@ class PlaylistDetailScreen extends ConsumerWidget {
                   buildDefaultDragHandles: false,
                   itemCount: list.length,
                   onReorderItem: (oldIndex, newIndex) async {
-                    await ref.read(dbProvider).reorderPlaylistTracks(playlist.id, oldIndex, newIndex);
+                    await ref
+                        .read(dbProvider)
+                        .reorderPlaylistTracks(playlist.id, oldIndex, newIndex);
                     ref.invalidate(playlistTracksProvider(playlist.id));
                   },
                   itemBuilder: (context, index) {
@@ -100,7 +115,9 @@ class PlaylistDetailScreen extends ConsumerWidget {
                           icon: Icon(
                             Icons.more_vert_rounded,
                             size: 20,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           tooltip: l10n.moreActions,
                           onSelected: (action) {
@@ -117,17 +134,26 @@ class PlaylistDetailScreen extends ConsumerWidget {
                             PopupMenuItem(
                               value: _TrackAction.playNext,
                               height: 44,
-                              child: _MenuRow(Icons.playlist_add_rounded, l10n.playNext),
+                              child: _MenuRow(
+                                Icons.playlist_add_rounded,
+                                l10n.playNext,
+                              ),
                             ),
                             PopupMenuItem(
                               value: _TrackAction.enqueue,
                               height: 44,
-                              child: _MenuRow(Icons.queue_music_rounded, l10n.addToQueue),
+                              child: _MenuRow(
+                                Icons.queue_music_rounded,
+                                l10n.addToQueue,
+                              ),
                             ),
                             PopupMenuItem(
                               value: _TrackAction.remove,
                               height: 44,
-                              child: _MenuRow(Icons.delete_outline_rounded, l10n.removeFromPlaylist),
+                              child: _MenuRow(
+                                Icons.delete_outline_rounded,
+                                l10n.removeFromPlaylist,
+                              ),
                             ),
                           ],
                         ),
@@ -143,7 +169,11 @@ class PlaylistDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _playShuffled(BuildContext context, WidgetRef ref, List<Track> tracks) async {
+  Future<void> _playShuffled(
+    BuildContext context,
+    WidgetRef ref,
+    List<Track> tracks,
+  ) async {
     final shuffled = List<Track>.of(tracks)..shuffle();
     ref.read(playerControllerProvider.notifier).playFrom(shuffled, 0);
   }
@@ -151,7 +181,9 @@ class PlaylistDetailScreen extends ConsumerWidget {
   Future<void> _remove(BuildContext context, WidgetRef ref, Track track) async {
     final l10n = ref.read(l10nProvider);
     final messenger = ScaffoldMessenger.of(context);
-    await ref.read(dbProvider).removeTrackFromPlaylist(playlist.id, track.id, track.source.apiValue);
+    await ref
+        .read(dbProvider)
+        .removeTrackFromPlaylist(playlist.id, track.id, track.source.apiValue);
     ref.invalidate(playlistTracksProvider(playlist.id));
     if (context.mounted) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.removedFromPlaylist)));
@@ -182,7 +214,11 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 19, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        Icon(
+          icon,
+          size: 19,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 12),
         Text(label, style: const TextStyle(fontSize: 14)),
       ],
