@@ -32,6 +32,10 @@ class MyMusicApi {
             options.headers['X-API-Key'] = ApiConfig.apiKey;
             handler.next(options);
           },
+          onResponse: (response, handler) {
+            debugPrint('api: HTTP ${response.statusCode} ${response.requestOptions.path}');
+            handler.next(response);
+          },
         ),
       );
     }
@@ -182,9 +186,6 @@ class MyMusicApi {
       return await run();
     } on DioException catch (e) {
       final status = e.response?.statusCode;
-      if (e.response != null) {
-        debugPrint('api: HTTP $status ${e.requestOptions.path}');
-      }
       if (status == 401 || status == 403) throw ApiKeyRejectedException();
       if (status == 503) throw DioApiException();
       if (e.type == DioExceptionType.connectionError ||
