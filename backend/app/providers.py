@@ -81,16 +81,28 @@ async def search_ytmusic(query: str, limit: int) -> list[Track]:
             # Album & channel tidak bisa diputar sebagai satu lagu; buang
             # diam-diam supaya tidak memenuhi hasil.
             continue
+        title = str(entry.get("title") or "").strip()
+        if kind == "video":
+            # Baris tanpa judul adalah baris hantu di UI: buang, jangan
+            # kirim teks kosong ke aplikasi.
+            if not title:
+                continue
+            thumb = _first_thumb(entry) or _youtube_thumb(video_id)
+        else:
+            # Entri mix dari flat extract sering tidak punya judul maupun
+            # thumbnail. Aplikasi punya label cadangan sendiri; di sini cukup
+            # kirim id supaya bisa diputar.
+            thumb = _first_thumb(entry)
         tracks.append(
             Track(
                 id=video_id,
                 source="ytmusic",
                 kind=kind,
-                title=entry.get("title") or "",
+                title=title,
                 artist=(entry.get("artist") or entry.get("uploader") or ""),
                 uploader=entry.get("uploader") or "",
                 duration=int(entry.get("duration") or 0),
-                thumb=_first_thumb(entry),
+                thumb=thumb,
                 url=(
                     f"https://music.youtube.com/watch?v={video_id}"
                     if kind == "video"
@@ -170,28 +182,48 @@ async def _spotify_token() -> str | None:
         return resp.json().get("access_token")
 
 
+YT_THUMB = "https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+
+
+def _youtube_thumb(video_id: str) -> str:
+    """Thumbnail resmi YouTube._flat extract dari music.youtube.com tidak
+    mengirim thumbnails sama sekali (terbukti: 17 dari 17 entri tanpa thumb),
+    jadi URL ini adalah sumber satu-satunya yang murah dan selalu ada."""
+    return YT_THUMB.format(video_id=video_id)
+
+
 async def enrich_with_lastfm(tracks: list[Track]) -> list[Track]:
     api_key = get_settings().lastfm_api_key
     if not api_key:
         return tracks
-    async with httpx.AsyncClient(timeout=8) as client:
-        for track in list(tracks):
-            params = {
-                "method": "track.getInfo",
-                "api_key": api_key,
-                "format": "json",
-                "artist": track.artist,
-                "track": track.title,
-            }
-            resp = await client.get("https://ws.audioscrobbler.com/2.0/", params=params)
+
+    async def enrich(track: Track) -> Track:
+        if track.thumb:
+            return track
+        params = {
+            "method": "track.getInfo",
+            "api_key": api_key,
+            "format": "json",
+            "artist": track.artist,
+            "track": track.title,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                resp = await client.get("https://ws.audioscrobbler.com/2.0/", params=params)
             if resp.status_code != 200:
-                continue
+                return track
             info = resp.json().get("track")
             album = (info or {}).get("album") or {}
             art = album.get("image") or []
-            if art and not track.thumb:
+            if art:
                 track.thumb = art[-1].get("#text", "")
-    return tracks
+        except (httpx.HTTPError, ValueError):
+            pass
+        return track
+
+    # Dijalankan paralel: sebelumnya serial per track, jadi 20 hasil berarti 20
+    # putaran berurutan.
+    return list(await asyncio.gather(*(enrich(t) for t in tracks)))
 
 
 PROVIDERS = {

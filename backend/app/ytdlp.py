@@ -284,7 +284,8 @@ def normalize_entry(entry: dict, source: str) -> dict | None:
         "title": entry.get("title") or "",
         "artist": (entry.get("artist") or entry.get("uploader") or ""),
         "uploader": entry.get("uploader") or "",
-        "thumb": _thumbnail(entry),
+        "thumb": _thumbnail(entry)
+        or f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
         "url": f"https://www.youtube.com/watch?v={video_id}",
     }
 
