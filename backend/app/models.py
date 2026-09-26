@@ -14,6 +14,12 @@ class Track(BaseModel):
     thumb: str = ""
     uploader: str = ""
     url: str = ""
+    # "video" (bisa diputar), "mix" (radio YouTube Music), "album", "channel".
+    kind: str = "video"
+
+
+class SuggestResponse(BaseModel):
+    suggestions: list[str] = []
 
 
 class SearchResponse(BaseModel):
