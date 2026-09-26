@@ -261,9 +261,24 @@ async def extract_stream(video_id: str, quality: str) -> dict:
     raise YtDlpError(" | ".join(errors))
 
 
+_PLAYLIST_ID_PREFIXES = ("PL", "RD", "OLAK", "UU", "LL")
+
+
+def strip_music_prefix(mix_id: str) -> str:
+    """Id mix dari flat extract music.youtube.com berprefix browse 'VL'
+    (contoh VLPLKnwlz-...). URL playlist biasa hanya menerima 'PL...' atau
+    varian 'RD...'/'OLAK...'/'UU...'/'LL...', jadi 'VL' harus dibuang dulu."""
+    if len(mix_id) > 2 and mix_id.startswith("VL") and mix_id[2:].startswith(
+        _PLAYLIST_ID_PREFIXES
+    ):
+        return mix_id[2:]
+    return mix_id
+
+
 async def extract_mix(mix_id: str) -> list[dict]:
+    playlist_id = strip_music_prefix(mix_id)
     info = await _extract_info(
-        f"https://www.youtube.com/playlist?list={mix_id}",
+        f"https://www.youtube.com/playlist?list={playlist_id}",
         {"extract_flat": True},
     )
     results = []
